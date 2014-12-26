@@ -128,7 +128,7 @@ func calculateETag(path string) (string, error) {
 	return etag, nil
 }
 
-func upload(source file, destBucket *s3.Bucket) error {
+func upload(source file, destBucket *s3.Bucket, acl s3.ACL) error {
 	f, err := os.Open(source.absPath)
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func upload(source file, destBucket *s3.Bucket) error {
 		contentType = "application/octet-stream"
 	}
 
-	return destBucket.PutReader(source.path, f, source.size, contentType, s3.PublicRead)
+	return destBucket.PutReader(source.path, f, source.size, contentType, acl)
 }
 
 func cleanup(paths []string, destBucket *s3.Bucket) error {
@@ -151,9 +151,9 @@ func cleanup(paths []string, destBucket *s3.Bucket) error {
 var wg sync.WaitGroup
 
 // worker uploads files
-func worker(filesToUpload <-chan file, destBucket *s3.Bucket) {
+func worker(filesToUpload <-chan file, destBucket *s3.Bucket, acl s3.ACL) {
 	for f := range filesToUpload {
-		err := upload(f, destBucket)
+		err := upload(f, destBucket, acl)
 		if err != nil {
 			fmt.Printf("Error uploading %s: %s\n", f.path, err)
 		}
@@ -163,7 +163,7 @@ func worker(filesToUpload <-chan file, destBucket *s3.Bucket) {
 }
 
 func main() {
-	var accessKey, secretKey, sourcePath, regionName, bucketName string
+	var accessKey, secretKey, sourcePath, regionName, bucketName, acl string
 	var numberOfWorkers int
 	var help bool
 	flag.StringVar(&accessKey, "key", "", "Access Key ID for AWS")
@@ -171,6 +171,7 @@ func main() {
 	flag.StringVar(&regionName, "region", "us-east-1", "Name of region for AWS")
 	flag.StringVar(&bucketName, "bucket", "", "Destination bucket name on AWS")
 	flag.StringVar(&sourcePath, "source", ".", "path of files to upload")
+	flag.StringVar(&acl, "acl", "public-read", "ACL permissions for files uploaded (public-read, private)")
 	flag.IntVar(&numberOfWorkers, "workers", 10, "number of workers to upload files")
 	flag.BoolVar(&help, "h", false, "help")
 	flag.Parse()
@@ -200,7 +201,7 @@ func main() {
 	filesToUpload := make(chan file)
 	for i := 0; i < numberOfWorkers; i++ {
 		wg.Add(1)
-		go worker(filesToUpload, b)
+		go worker(filesToUpload, b, s3.ACL(acl))
 	}
 	plan(sourcePath, b, filesToUpload)
 	wg.Wait()
