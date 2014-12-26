@@ -52,8 +52,6 @@ func walk(basePath string, files chan<- file) {
 }
 
 func plan(sourcePath string, destBucket *s3.Bucket, uploadFiles chan<- file) {
-	fmt.Println("Planning upload...")
-
 	contents, err := destBucket.GetBucketContents()
 	if err != nil {
 		log.Fatal(err)
