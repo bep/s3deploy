@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mitchellh/goamz/aws"
@@ -81,9 +82,12 @@ func plan(sourcePath string, destBucket *s3.Bucket, uploadFiles chan<- file) {
 	}
 	close(uploadFiles)
 
+	var filesToDelete = make([]string, 0, len(remoteFiles))
 	for key := range remoteFiles {
 		fmt.Printf("%s not found in source, deleting.\n", key)
+		filesToDelete = append(filesToDelete, key)
 	}
+	cleanup(filesToDelete, destBucket)
 }
 
 // can use size and time (or possibly md5) to determine what needs to upload
@@ -125,8 +129,6 @@ func calculateETag(path string) (string, error) {
 }
 
 func upload(source file, destBucket *s3.Bucket) error {
-	fmt.Printf("uploading %s...\n", source.path)
-
 	f, err := os.Open(source.absPath)
 	if err != nil {
 		return err
@@ -141,14 +143,35 @@ func upload(source file, destBucket *s3.Bucket) error {
 	return destBucket.PutReader(source.path, f, source.size, contentType, s3.PublicRead)
 }
 
+func cleanup(paths []string, destBucket *s3.Bucket) error {
+	// only can delete 1000 at a time, TODO: split if needed
+	return destBucket.MultiDel(paths)
+}
+
+var wg sync.WaitGroup
+
+// worker uploads files
+func worker(filesToUpload <-chan file, destBucket *s3.Bucket) {
+	for f := range filesToUpload {
+		err := upload(f, destBucket)
+		if err != nil {
+			fmt.Printf("Error uploading %s: %s\n", f.path, err)
+		}
+	}
+
+	wg.Done()
+}
+
 func main() {
 	var accessKey, secretKey, sourcePath, regionName, bucketName string
+	var numberOfWorkers int
 	var help bool
 	flag.StringVar(&accessKey, "key", "", "Access Key ID for AWS")
 	flag.StringVar(&secretKey, "secret", "", "Secret Access Key for AWS")
 	flag.StringVar(&regionName, "region", "us-east-1", "Name of region for AWS")
 	flag.StringVar(&bucketName, "bucket", "", "Destination bucket name on AWS")
 	flag.StringVar(&sourcePath, "source", ".", "path of files to upload")
+	flag.IntVar(&numberOfWorkers, "workers", 10, "number of workers to upload files")
 	flag.BoolVar(&help, "h", false, "help")
 	flag.Parse()
 
@@ -175,13 +198,10 @@ func main() {
 	b := s.Bucket(bucketName)
 
 	filesToUpload := make(chan file)
-	go func() {
-		for f := range filesToUpload {
-			err := upload(f, b)
-			if err != nil {
-				fmt.Printf("Error uploading %s: %s\n", f.path, err)
-			}
-		}
-	}()
+	for i := 0; i < numberOfWorkers; i++ {
+		wg.Add(1)
+		go worker(filesToUpload, b)
+	}
 	plan(sourcePath, b, filesToUpload)
+	wg.Wait()
 }
