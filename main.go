@@ -102,7 +102,7 @@ func shouldOverwrite(source file, dest s3.Key) (bool, string) {
 
 	etag, err := calculateETag(source.absPath)
 	if err != nil {
-		log.Fatalf("Error calculating ETag for %s: ", source.absPath, err)
+		log.Fatalf("Error calculating ETag for %s: %v", source.absPath, err)
 	}
 	if dest.ETag == etag {
 		return false, "etags match"
