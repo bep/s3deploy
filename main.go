@@ -13,55 +13,85 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mitchellh/goamz/aws"
+	"github.com/mitchellh/goamz/aws" // http://gopkg.in/amz.v2
 	"github.com/mitchellh/goamz/s3"
 )
 
 type file struct {
-	path         string
-	absPath      string
+	path         string // relative path
+	absPath      string // absolute path
 	size         int64
 	lastModified time.Time
 }
 
-// walk a local directory
-func walk(basePath string, files chan<- file) {
-	filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			// skip hidden directories like .git
-			if strings.HasPrefix(info.Name(), ".") {
-				return filepath.SkipDir
-			}
-		} else {
-			if info.Name() == ".DS_Store" {
-				return nil
-			}
-			abs, err := filepath.Abs(path)
-			rel, err := filepath.Rel(basePath, path)
-			if err != nil {
-				return err
-			}
-			files <- file{path: rel, absPath: abs, size: info.Size(), lastModified: info.ModTime()}
-		}
-		return nil
-	})
-	close(files)
+var wg sync.WaitGroup
+
+func main() {
+	var accessKey, secretKey, sourcePath, regionName, bucketName string
+	var numberOfWorkers int
+	var help bool
+
+	// Usage example:
+	// s3up -source=public/ -bucket=origin.edmontongo.org -key=$AWS_ACCESS_KEY_ID -secret=$AWS_SECRET_ACCESS_KEY
+
+	flag.StringVar(&accessKey, "key", "", "Access Key ID for AWS")
+	flag.StringVar(&secretKey, "secret", "", "Secret Access Key for AWS")
+	flag.StringVar(&regionName, "region", "us-east-1", "Name of region for AWS")
+	flag.StringVar(&bucketName, "bucket", "", "Destination bucket name on AWS")
+	flag.StringVar(&sourcePath, "source", ".", "path of files to upload")
+	flag.IntVar(&numberOfWorkers, "workers", 10, "number of workers to upload files")
+	flag.BoolVar(&help, "h", false, "help")
+
+	flag.Parse()
+
+	if help {
+		flag.Usage()
+		return
+	}
+
+	if accessKey == "" || secretKey == "" {
+		fmt.Println("AWS key and secret are required.")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if bucketName == "" {
+		fmt.Println("AWS bucket is required.")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	// Get bucket with bucketName
+	auth := aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
+	region := aws.Regions[regionName]
+	s := s3.New(auth, region)
+	b := s.Bucket(bucketName)
+
+	filesToUpload := make(chan file)
+	for i := 0; i < numberOfWorkers; i++ {
+		wg.Add(1)
+		go worker(filesToUpload, b)
+	}
+
+	plan(sourcePath, b, filesToUpload)
+	wg.Wait()
 }
 
+// plan figures out which files need to be uploaded.
 func plan(sourcePath string, destBucket *s3.Bucket, uploadFiles chan<- file) {
+	// List all files in the remote bucket
 	contents, err := destBucket.GetBucketContents()
 	if err != nil {
 		log.Fatal(err)
 	}
 	remoteFiles := *contents
 
+	// All local files at sourcePath
 	localFiles := make(chan file)
 	go walk(sourcePath, localFiles)
 
 	for f := range localFiles {
+		// default: upload because local file not found on remote.
 		up := true
 		reason := "not found"
 
@@ -80,6 +110,7 @@ func plan(sourcePath string, destBucket *s3.Bucket, uploadFiles chan<- file) {
 	}
 	close(uploadFiles)
 
+	// any remote files not found locally should be removed:
 	var filesToDelete = make([]string, 0, len(remoteFiles))
 	for key := range remoteFiles {
 		fmt.Printf("%s not found in source, deleting.\n", key)
@@ -88,8 +119,38 @@ func plan(sourcePath string, destBucket *s3.Bucket, uploadFiles chan<- file) {
 	cleanup(filesToDelete, destBucket)
 }
 
-// can use size and time (or possibly md5) to determine what needs to upload
-func shouldOverwrite(source file, dest s3.Key) (bool, string) {
+// walk a local directory
+func walk(basePath string, files chan<- file) {
+	filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			// skip hidden directories like .git
+			if strings.HasPrefix(info.Name(), ".") {
+				return filepath.SkipDir
+			}
+		} else {
+			if info.Name() == ".DS_Store" {
+				return nil
+			}
+			abs, err := filepath.Abs(path)
+			if err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(basePath, path)
+			if err != nil {
+				return err
+			}
+			files <- file{path: rel, absPath: abs, size: info.Size(), lastModified: info.ModTime()}
+		}
+		return nil
+	})
+	close(files)
+}
+
+// shouldOverwrite uses size or md5 to determine what needs to be uploaded
+func shouldOverwrite(source file, dest s3.Key) (up bool, reason string) {
 	if source.size != dest.Size {
 		return true, "file size mismatch"
 	}
@@ -126,27 +187,10 @@ func calculateETag(path string) (string, error) {
 	return etag, nil
 }
 
-func upload(source file, destBucket *s3.Bucket) error {
-	f, err := os.Open(source.absPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	contentType := mime.TypeByExtension(filepath.Ext(source.path))
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
-	return destBucket.PutReader(source.path, f, source.size, contentType, "public-read")
-}
-
 func cleanup(paths []string, destBucket *s3.Bucket) error {
 	// only can delete 1000 at a time, TODO: split if needed
 	return destBucket.MultiDel(paths)
 }
-
-var wg sync.WaitGroup
 
 // worker uploads files
 func worker(filesToUpload <-chan file, destBucket *s3.Bucket) {
@@ -160,46 +204,17 @@ func worker(filesToUpload <-chan file, destBucket *s3.Bucket) {
 	wg.Done()
 }
 
-func main() {
-	var accessKey, secretKey, sourcePath, regionName, bucketName string
-	var numberOfWorkers int
-	var help bool
-	flag.StringVar(&accessKey, "key", "", "Access Key ID for AWS")
-	flag.StringVar(&secretKey, "secret", "", "Secret Access Key for AWS")
-	flag.StringVar(&regionName, "region", "us-east-1", "Name of region for AWS")
-	flag.StringVar(&bucketName, "bucket", "", "Destination bucket name on AWS")
-	flag.StringVar(&sourcePath, "source", ".", "path of files to upload")
-	flag.IntVar(&numberOfWorkers, "workers", 10, "number of workers to upload files")
-	flag.BoolVar(&help, "h", false, "help")
-	flag.Parse()
+func upload(source file, destBucket *s3.Bucket) error {
+	f, err := os.Open(source.absPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
-	if help {
-		flag.Usage()
-		return
+	contentType := mime.TypeByExtension(filepath.Ext(source.path))
+	if contentType == "" {
+		contentType = "application/octet-stream"
 	}
 
-	if accessKey == "" || secretKey == "" {
-		fmt.Println("AWS key and secret are required.")
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	if bucketName == "" {
-		fmt.Println("AWS bucket is required.")
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	auth := aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
-	region := aws.Regions[regionName]
-	s := s3.New(auth, region)
-	b := s.Bucket(bucketName)
-
-	filesToUpload := make(chan file)
-	for i := 0; i < numberOfWorkers; i++ {
-		wg.Add(1)
-		go worker(filesToUpload, b)
-	}
-	plan(sourcePath, b, filesToUpload)
-	wg.Wait()
+	return destBucket.PutReader(source.path, f, source.size, contentType, "public-read")
 }
