@@ -102,7 +102,7 @@ func main() {
 	// if any errors occurred during upload, exit with an error status code
 	select {
 	case <-errs:
-		fmt.Println("Errors occurred while upload files.")
+		fmt.Println("Errors occurred while uploading files.")
 		os.Exit(1)
 	default:
 	}
