@@ -89,13 +89,23 @@ func main() {
 	b := s.Bucket(bucketName)
 
 	filesToUpload := make(chan file)
+	errs := make(chan error, 1)
 	for i := 0; i < numberOfWorkers; i++ {
 		wg.Add(1)
-		go worker(filesToUpload, b)
+		go worker(filesToUpload, b, errs)
 	}
 
 	plan(sourcePath, b, filesToUpload)
+
 	wg.Wait()
+
+	// if any errors occurred during upload, exit with an error status code
+	select {
+	case <-errs:
+		fmt.Println("Errors occurred while upload files.")
+		os.Exit(1)
+	default:
+	}
 }
 
 // plan figures out which files need to be uploaded.
@@ -214,11 +224,16 @@ func cleanup(paths []string, destBucket *s3.Bucket) error {
 }
 
 // worker uploads files
-func worker(filesToUpload <-chan file, destBucket *s3.Bucket) {
+func worker(filesToUpload <-chan file, destBucket *s3.Bucket, errs chan<- error) {
 	for f := range filesToUpload {
 		err := upload(f, destBucket)
 		if err != nil {
 			fmt.Printf("Error uploading %s: %s\n", f.path, err)
+			// if there are no errors on the channel, put this one there
+			select {
+			case errs <- err:
+			default:
+			}
 		}
 	}
 
