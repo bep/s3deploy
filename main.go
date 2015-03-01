@@ -48,15 +48,32 @@ func main() {
 
 	flag.Parse()
 
+	fmt.Println("s3up 0.1.0, (c) 2015 Nathan Youngman.")
+
 	if help {
 		flag.Usage()
 		return
 	}
 
-	if accessKey == "" || secretKey == "" {
+	var auth aws.Auth
+
+	if accessKey != "" && secretKey != "" {
+		auth = aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
+	} else if accessKey != "" || secretKey != "" {
+		// provided one but not both
 		fmt.Println("AWS key and secret are required.")
 		flag.Usage()
 		os.Exit(1)
+	} else {
+		// TODO: Getenv AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+		// load credentials from file
+		var err error
+		auth, err = aws.SharedAuth()
+		if err != nil {
+			fmt.Println("Credentials not found in ~/.aws/credentials")
+			flag.Usage()
+			os.Exit(1)
+		}
 	}
 
 	if bucketName == "" {
@@ -66,7 +83,7 @@ func main() {
 	}
 
 	// Get bucket with bucketName
-	auth := aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
+
 	region := aws.Regions[regionName]
 	s := s3.New(auth, region)
 	b := s.Bucket(bucketName)
