@@ -13,6 +13,7 @@ import (
 	"mime"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -31,9 +32,12 @@ type file struct {
 var wg sync.WaitGroup
 
 func main() {
-	var accessKey, secretKey, sourcePath, regionName, bucketName string
-	var numberOfWorkers int
-	var help bool
+	var (
+		accessKey, secretKey, sourcePath, regionName, bucketName string
+		numberOfWorkers                                          int
+		force                                                    bool
+		help                                                     bool
+	)
 
 	// Usage example:
 	// s3up -source=public/ -bucket=origin.edmontongo.org -key=$AWS_ACCESS_KEY_ID -secret=$AWS_SECRET_ACCESS_KEY
@@ -43,7 +47,8 @@ func main() {
 	flag.StringVar(&regionName, "region", "us-east-1", "Name of region for AWS")
 	flag.StringVar(&bucketName, "bucket", "", "Destination bucket name on AWS")
 	flag.StringVar(&sourcePath, "source", ".", "path of files to upload")
-	flag.IntVar(&numberOfWorkers, "workers", 10, "number of workers to upload files")
+	flag.BoolVar(&force, "force", false, "upload even if the etags match")
+	flag.IntVar(&numberOfWorkers, "workers", -1, "number of workers to upload files")
 	flag.BoolVar(&help, "h", false, "help")
 
 	flag.Parse()
@@ -55,7 +60,22 @@ func main() {
 		return
 	}
 
+	// set to max numb of workers
+	if numberOfWorkers == -1 {
+		numberOfWorkers = runtime.NumCPU()
+	}
+
+	runtime.GOMAXPROCS(numberOfWorkers)
+
 	var auth aws.Auth
+
+	if accessKey == "" {
+		accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
+	}
+
+	if secretKey == "" {
+		secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
+	}
 
 	if accessKey != "" && secretKey != "" {
 		auth = aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
@@ -65,7 +85,6 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	} else {
-		// TODO: Getenv AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 		// load credentials from file
 		var err error
 		auth, err = aws.SharedAuth()
@@ -95,7 +114,7 @@ func main() {
 		go worker(filesToUpload, b, errs)
 	}
 
-	plan(sourcePath, b, filesToUpload)
+	plan(force, sourcePath, b, filesToUpload)
 
 	wg.Wait()
 
@@ -109,7 +128,7 @@ func main() {
 }
 
 // plan figures out which files need to be uploaded.
-func plan(sourcePath string, destBucket *s3.Bucket, uploadFiles chan<- file) {
+func plan(force bool, sourcePath string, destBucket *s3.Bucket, uploadFiles chan<- file) {
 	// List all files in the remote bucket
 	contents, err := destBucket.GetBucketContents()
 	if err != nil {
@@ -128,6 +147,11 @@ func plan(sourcePath string, destBucket *s3.Bucket, uploadFiles chan<- file) {
 
 		if key, ok := remoteFiles[f.path]; ok {
 			up, reason = shouldOverwrite(f, key)
+			if force {
+				up = true
+				reason = "force"
+			}
+
 			// remove from map, whatever is leftover should be deleted:
 			delete(remoteFiles, f.path)
 		}
