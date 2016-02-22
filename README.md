@@ -2,7 +2,7 @@
 
 A simple tool to deploy static websites to Amazon S3.
 
-# Use
+## Use
 
 ```bash
 Usage of s3up:
@@ -26,7 +26,7 @@ Usage of s3up:
 **Note:** `key` and `secret` can also be set in environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
 
-# Advanced Configuration
+## Advanced Configuration
 
 Add a `.s3up.yml` configuration file in the root of your site. Example configuration:
 
@@ -46,7 +46,7 @@ routes:
 ``` 
 
 
-# Example IAM Policy
+## Example IAM Policy
 
 ```json
 {
@@ -75,7 +75,7 @@ routes:
 
 \* replace <bucketname> with your own.
 
-### Alternatives
+## Alternatives
 
 * [go3up](https://github.com/alexaandru/go3up) by Alexandru Ungur
 * [s3up](https://github.com/nathany/s3up) by Nathan Youngman (the origin of this repo)
