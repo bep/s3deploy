@@ -8,18 +8,20 @@ import (
 	"crypto/md5"
 	"flag"
 	"fmt"
+	"github.com/mitchellh/goamz/aws"
+	"github.com/mitchellh/goamz/s3"
+	"gopkg.in/yaml.v2"
 	"io"
+	"io/ioutil"
 	"log"
 	"mime"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/mitchellh/goamz/aws" // http://gopkg.in/amz.v2
-	"github.com/mitchellh/goamz/s3"
 )
 
 type file struct {
@@ -29,7 +31,25 @@ type file struct {
 	lastModified time.Time
 }
 
-var wg sync.WaitGroup
+// read config from .s3up.yml if found.
+type config struct {
+	Routes []*route `yaml:"routes"`
+}
+
+type route struct {
+	Route   string            `yaml:"route"`
+	Headers map[string]string `yaml:"headers"`
+	Gzip    bool              `yaml:"gzip"`
+
+	routerRE *regexp.Regexp // compiled version of Route
+}
+
+var (
+	wg   sync.WaitGroup
+	conf *config
+)
+
+const configFile = ".s3up.yml"
 
 func main() {
 	var (
@@ -52,6 +72,15 @@ func main() {
 	flag.BoolVar(&help, "h", false, "help")
 
 	flag.Parse()
+
+	// load additional config from file if it exists
+	var err error
+	conf, err = loadConfig()
+
+	if err != nil {
+		fmt.Printf("Failed to load config from %s: %s", configFile, err)
+		os.Exit(-1)
+	}
 
 	fmt.Println("s3up 0.1.0, (c) 2015 Nathan Youngman.")
 
@@ -265,6 +294,7 @@ func worker(filesToUpload <-chan file, destBucket *s3.Bucket, errs chan<- error)
 }
 
 func upload(source file, destBucket *s3.Bucket) error {
+
 	f, err := os.Open(source.absPath)
 	if err != nil {
 		return err
@@ -276,5 +306,69 @@ func upload(source file, destBucket *s3.Bucket) error {
 		contentType = "application/octet-stream"
 	}
 
-	return destBucket.PutReader(source.path, f, source.size, contentType, "public-read")
+	headers := map[string][]string{
+		"Content-Type": {contentType},
+	}
+
+	route, err := findRoute(source.path)
+
+	if err != nil {
+		return err
+	}
+
+	if route != nil {
+
+		for k, v := range route.Headers {
+			headers[k] = []string{v}
+		}
+	}
+
+	return destBucket.PutReaderHeader(source.path, f, source.size, headers, "public-read")
+}
+
+func findRoute(path string) (*route, error) {
+	if conf == nil {
+		return nil, nil
+	}
+
+	var err error
+
+	for _, r := range conf.Routes {
+		if r.routerRE == nil {
+			r.routerRE, err = regexp.Compile(r.Route)
+
+			if err != nil {
+				return nil, err
+			}
+		}
+		if r.routerRE.MatchString(path) {
+			return r, nil
+		}
+
+	}
+
+	// no route found
+	return nil, nil
+
+}
+
+func loadConfig() (*config, error) {
+
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	data, err := ioutil.ReadFile(configFile)
+
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	conf := &config{}
+
+	err = yaml.Unmarshal(data, conf)
+	if err != nil {
+		return nil, err
+	}
+	return conf, nil
 }
