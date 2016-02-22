@@ -5,6 +5,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/md5"
 	"flag"
 	"fmt"
@@ -316,14 +318,24 @@ func upload(source file, destBucket *s3.Bucket) error {
 		return err
 	}
 
+	var r io.Reader = f
+
 	if route != nil {
 
 		for k, v := range route.Headers {
 			headers[k] = []string{v}
 		}
+
+		if route.Gzip {
+			var b bytes.Buffer
+			gz := gzip.NewWriter(&b)
+			io.Copy(gz, f)
+			r = &b
+			headers["Content-Encoding"] = []string{"gzip"}
+		}
 	}
 
-	return destBucket.PutReaderHeader(source.path, f, source.size, headers, "public-read")
+	return destBucket.PutReaderHeader(source.path, r, source.size, headers, "public-read")
 }
 
 func findRoute(path string) (*route, error) {
