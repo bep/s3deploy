@@ -318,7 +318,10 @@ func upload(source file, destBucket *s3.Bucket) error {
 		return err
 	}
 
-	var r io.Reader = f
+	var (
+		r    io.Reader = f
+		size           = source.size
+	)
 
 	if route != nil {
 
@@ -331,11 +334,12 @@ func upload(source file, destBucket *s3.Bucket) error {
 			gz := gzip.NewWriter(&b)
 			io.Copy(gz, f)
 			r = &b
+			size = int64(b.Len())
 			headers["Content-Encoding"] = []string{"gzip"}
 		}
 	}
 
-	return destBucket.PutReaderHeader(source.path, r, source.size, headers, "public-read")
+	return destBucket.PutReaderHeader(source.path, r, size, headers, "public-read")
 }
 
 func findRoute(path string) (*route, error) {
