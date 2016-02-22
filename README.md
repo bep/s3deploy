@@ -1,11 +1,11 @@
-# s3up
+# s3deploy
 
 A simple tool to deploy static websites to Amazon S3.
 
 ## Use
 
 ```bash
-Usage of s3up:
+Usage of s3deploy:
   -bucket string
     	Destination bucket name on AWS
   -force
@@ -28,7 +28,7 @@ Usage of s3up:
 
 ## Advanced Configuration
 
-Add a `.s3up.yml` configuration file in the root of your site. Example configuration:
+Add a `.s3deploy.yml` configuration file in the root of your site. Example configuration:
 
 ```yaml
 routes:
@@ -78,4 +78,4 @@ routes:
 ## Alternatives
 
 * [go3up](https://github.com/alexaandru/go3up) by Alexandru Ungur
-* [s3up](https://github.com/nathany/s3up) by Nathan Youngman (the origin of this repo)
+* [s3deploy](https://github.com/nathany/s3up) by Nathan Youngman (the starting-point of this project)

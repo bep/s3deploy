@@ -22,6 +22,6 @@ _testmain.go
 *.exe
 *.test
 *.prof
-s3up
+s3deploy
 *.log
 cover.out

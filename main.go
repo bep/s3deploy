@@ -1,4 +1,6 @@
-// Copyright (c) 2015, Nathan Youngman. All rights reserved.
+// Copyright 2016-present Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>
+//
+// Portions copyright 2015, Nathan Youngman. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -33,7 +35,7 @@ type file struct {
 	lastModified time.Time
 }
 
-// read config from .s3up.yml if found.
+// read config from .s3deploy.yml if found.
 type config struct {
 	Routes []*route `yaml:"routes"`
 }
@@ -51,7 +53,7 @@ var (
 	conf *config
 )
 
-const configFile = ".s3up.yml"
+const configFile = ".s3deploy.yml"
 
 func main() {
 	var (
@@ -62,7 +64,7 @@ func main() {
 	)
 
 	// Usage example:
-	// s3up -source=public/ -bucket=origin.edmontongo.org -key=$AWS_ACCESS_KEY_ID -secret=$AWS_SECRET_ACCESS_KEY
+	// s3deploy -source=public/ -bucket=origin.edmontongo.org -key=$AWS_ACCESS_KEY_ID -secret=$AWS_SECRET_ACCESS_KEY
 
 	flag.StringVar(&accessKey, "key", "", "Access Key ID for AWS")
 	flag.StringVar(&secretKey, "secret", "", "Secret Access Key for AWS")
@@ -84,7 +86,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	fmt.Println("s3up 0.2.0")
+	fmt.Println("s3deploy 0.1.0")
 
 	if help {
 		flag.Usage()
