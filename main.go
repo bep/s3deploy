@@ -333,6 +333,7 @@ func upload(source file, destBucket *s3.Bucket) error {
 			var b bytes.Buffer
 			gz := gzip.NewWriter(&b)
 			io.Copy(gz, f)
+			gz.Close()
 			r = &b
 			size = int64(b.Len())
 			headers["Content-Encoding"] = []string{"gzip"}
