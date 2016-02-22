@@ -84,7 +84,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	fmt.Println("s3up 0.1.0, (c) 2015 Nathan Youngman.")
+	fmt.Println("s3up 0.2.0")
 
 	if help {
 		flag.Usage()
