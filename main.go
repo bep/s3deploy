@@ -237,7 +237,34 @@ func walk(basePath string, files chan<- file) {
 
 // shouldOverwrite uses size or md5 to determine what needs to be uploaded
 func shouldOverwrite(source file, dest s3.Key) (up bool, reason string) {
-	if source.size != dest.Size {
+
+	f, err := os.Open(source.absPath)
+	if err != nil {
+		log.Fatalf("Error opening file %s: %v", source.absPath, err)
+	}
+	defer f.Close()
+
+	var (
+		sourceSize           = source.size
+		r          io.Reader = f
+	)
+
+	route, err := findRoute(source.path)
+
+	if err != nil {
+		log.Fatalf("Error finding route for %s: %v", source.absPath, err)
+	}
+
+	if route != nil && route.Gzip {
+		var b bytes.Buffer
+		gz := gzip.NewWriter(&b)
+		io.Copy(gz, f)
+		gz.Close()
+		r = &b
+		sourceSize = int64(b.Len())
+	}
+
+	if sourceSize != dest.Size {
 		return true, "file size mismatch"
 	}
 
@@ -247,7 +274,7 @@ func shouldOverwrite(source file, dest s3.Key) (up bool, reason string) {
 		return false, "last modified match"
 	}
 
-	etag, err := calculateETag(source.absPath)
+	etag, err := calculateETag(r)
 	if err != nil {
 		log.Fatalf("Error calculating ETag for %s: %v", source.absPath, err)
 	}
@@ -257,15 +284,11 @@ func shouldOverwrite(source file, dest s3.Key) (up bool, reason string) {
 	return true, "etags mismatch"
 }
 
-func calculateETag(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
+func calculateETag(r io.Reader) (string, error) {
 
 	h := md5.New()
-	_, err = io.Copy(h, f)
+
+	_, err := io.Copy(h, r)
 	if err != nil {
 		return "", err
 	}
