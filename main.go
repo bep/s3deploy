@@ -49,8 +49,9 @@ type route struct {
 }
 
 var (
-	wg   sync.WaitGroup
-	conf *config
+	wg      sync.WaitGroup
+	conf    *config
+	verbose bool
 )
 
 const configFile = ".s3deploy.yml"
@@ -72,6 +73,7 @@ func main() {
 	flag.StringVar(&bucketName, "bucket", "", "Destination bucket name on AWS")
 	flag.StringVar(&sourcePath, "source", ".", "path of files to upload")
 	flag.BoolVar(&force, "force", false, "upload even if the etags match")
+	flag.BoolVar(&verbose, "v", false, "enable verbose logging")
 	flag.IntVar(&numberOfWorkers, "workers", -1, "number of workers to upload files")
 	flag.BoolVar(&help, "h", false, "help")
 
@@ -192,7 +194,7 @@ func plan(force bool, sourcePath string, destBucket *s3.Bucket, uploadFiles chan
 		if up {
 			fmt.Printf("%s %s, uploading.\n", f.path, reason)
 			uploadFiles <- f
-		} else {
+		} else if verbose {
 			fmt.Printf("%s %s, skipping.\n", f.path, reason)
 		}
 	}
