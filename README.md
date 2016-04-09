@@ -1,5 +1,7 @@
 # s3deploy
 
+[![GoDoc](https://godoc.org/github.com/bep/s3deploy?status.svg)](https://godoc.org/github.com/bep/s3deploy)
+
 A simple tool to deploy static websites to Amazon S3 with Gzip and custom headers support (e.g. "Cache-Control").
 
 ## Use
