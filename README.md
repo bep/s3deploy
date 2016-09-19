@@ -6,7 +6,7 @@ A simple tool to deploy static websites to Amazon S3 with Gzip and custom header
 
 ## Install
 
-**s3deploy** is a Go application. The easiest way to intall it is via `go get`:
+**s3deploy** is a [Go application](https://golang.org/doc/install). The easiest way to intall it is via `go get`:
 
 ```bash
  go get -v github.com/bep/s3deploy
