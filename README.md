@@ -1,12 +1,15 @@
 # s3deploy
 
 [![GoDoc](https://godoc.org/github.com/bep/s3deploy?status.svg)](https://godoc.org/github.com/bep/s3deploy)
+[![Release](https://img.shields.io/github/release/bep/s3deploy.svg?style=flat-square)](https://github.com/bep/s3deploy/releases/latest)
 
 A simple tool to deploy static websites to Amazon S3 with Gzip and custom headers support (e.g. "Cache-Control").
 
 ## Install
 
-**s3deploy** is a [Go application](https://golang.org/doc/install). The easiest way to intall it is via `go get`:
+Pre-built binaries can be found [here](https://github.com/bep/s3deploy/releases/latest).
+
+**s3deploy** is a [Go application](https://golang.org/doc/install), so you can also get and build it yourself via `go get`:
 
 ```bash
  go get -v github.com/bep/s3deploy
@@ -96,4 +99,4 @@ Because static-site generators can recreate **every** file (even if identical) t
 ## Alternatives
 
 * [go3up](https://github.com/alexaandru/go3up) by Alexandru Ungur
-* [s3deploy](https://github.com/nathany/s3up) by Nathan Youngman (the starting-point of this project)
+* [s3up](https://github.com/nathany/s3up) by Nathan Youngman (the starting-point of this project)

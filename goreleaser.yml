@@ -1,0 +1,37 @@
+build:
+  main: main.go
+  binary: s3deploy
+  goos:
+    - darwin
+    - linux
+    - windows
+  goarch:
+    - amd64
+    - 386
+    - arm
+    - arm64
+fpm:
+  formats:
+      - deb
+  vendor: "bep"
+  url: "https://github.com/bep/s3deploy"
+  maintainer: "<Bjørn Erik Pedersen bjorn.erik.pedersen@gmail.com>"
+  description: "A simple tool to deploy static websites to Amazon S3 with Gzip and custom headers support."
+  license: "BSD 2-clause"
+archive:
+  format: tar.gz
+  format_overrides:
+    - goos: windows
+      format: zip
+  name_template: "{{.Binary}}_{{.Version}}_{{.Os}}-{{.Arch}}"
+  replacements:
+    amd64: 64bit
+    386: 32bit
+    arm: ARM
+    arm64: ARM64
+    darwin: macOS
+    linux: Linux
+    windows: Windows
+  files:
+    - README.md
+    - LICENSE

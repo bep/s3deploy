@@ -1,0 +1,10 @@
+checkout:
+  post:
+    - git fetch --tags
+deployment:
+  tag:
+    tag: /v[0-9]+(\.[0-9]+)*(-.*)*/
+    owner: bep
+    commands:
+      - gem install fpm
+      - curl -sL https://git.io/goreleaser | bash
