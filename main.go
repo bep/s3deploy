@@ -12,9 +12,6 @@ import (
 	"crypto/md5"
 	"flag"
 	"fmt"
-	"github.com/mitchellh/goamz/aws"
-	"github.com/mitchellh/goamz/s3"
-	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -26,6 +23,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mitchellh/goamz/aws"
+	"github.com/mitchellh/goamz/s3"
+	"gopkg.in/yaml.v2"
 )
 
 type file struct {
@@ -88,7 +89,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	fmt.Println("s3deploy 0.1.0")
+	fmt.Println("s3deploy 1.0")
 
 	if help {
 		flag.Usage()
