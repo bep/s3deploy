@@ -53,6 +53,10 @@ var (
 	wg      sync.WaitGroup
 	conf    *config
 	verbose bool
+
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
 
 const configFile = ".s3deploy.yml"
@@ -89,7 +93,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	fmt.Println("s3deploy 1.0")
+	fmt.Prinft("s3deploy %v, commit %v, built at %v\n", version, commit, date)
 
 	if help {
 		flag.Usage()
