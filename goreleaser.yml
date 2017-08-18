@@ -10,6 +10,15 @@ build:
     - 386
     - arm
     - arm64
+brew:
+  github:
+    owner: bep
+    name: homebrew-tap
+  folder: Formula
+  homepage:  "https://github.com/bep/s3deploy"
+  description: "A simple tool to deploy static websites to Amazon S3 with Gzip and custom headers support."
+  test: |
+    system "#{bin}/goreleaser -v"
 fpm:
   formats:
       - deb
