@@ -93,7 +93,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	fmt.Prinft("s3deploy %v, commit %v, built at %v\n", version, commit, date)
+	fmt.Printf("s3deploy %v, commit %v, built at %v\n", version, commit, date)
 
 	if help {
 		flag.Usage()
