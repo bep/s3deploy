@@ -1,7 +1,6 @@
 build:
   main: main.go
   binary: s3deploy
-  ldflags: -s -w -linkmode external -extldflags "-static"
   goos:
     - darwin
     - linux
@@ -15,7 +14,7 @@ fpm:
   formats:
       - deb
   vendor: "bep"
-  url: "https://github.com/bep/s3deploy"
+  homepage: "https://github.com/bep/s3deploy"
   maintainer: "<Bjørn Erik Pedersen bjorn.erik.pedersen@gmail.com>"
   description: "A simple tool to deploy static websites to Amazon S3 with Gzip and custom headers support."
   license: "BSD 2-clause"
