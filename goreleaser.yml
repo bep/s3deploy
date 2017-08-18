@@ -16,9 +16,9 @@ brew:
     name: homebrew-tap
   folder: Formula
   homepage:  "https://github.com/bep/s3deploy"
-  description: "A simple tool to deploy static websites to Amazon S3 with Gzip and custom headers support."
+  description: "Deploy static websites to Amazon S3 with Gzip and headers support."
   test: |
-    system "#{bin}/goreleaser -v"
+    system "#{bin}/goreleaser", "-v"
 fpm:
   formats:
       - deb
