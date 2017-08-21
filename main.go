@@ -17,6 +17,7 @@ import (
 	"log"
 	"mime"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -49,11 +50,23 @@ type route struct {
 	routerRE *regexp.Regexp // compiled version of Route
 }
 
-var (
-	wg      sync.WaitGroup
-	conf    *config
-	verbose bool
+type deployer struct {
+	wg   sync.WaitGroup
+	conf *config
 
+	sourcePath string
+	bucketName string
+
+	// To have multiple sites in one bucket.
+	bucketPath string
+
+	regionName string
+
+	verbose bool
+	force   bool
+}
+
+var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
@@ -63,30 +76,32 @@ const configFile = ".s3deploy.yml"
 
 func main() {
 	var (
-		accessKey, secretKey, sourcePath, regionName, bucketName string
-		numberOfWorkers                                          int
-		force                                                    bool
-		help                                                     bool
+		accessKey, secretKey string
+		numberOfWorkers      int
+
+		help bool
 	)
+
+	d := &deployer{}
 
 	// Usage example:
 	// s3deploy -source=public/ -bucket=origin.edmontongo.org -key=$AWS_ACCESS_KEY_ID -secret=$AWS_SECRET_ACCESS_KEY
 
 	flag.StringVar(&accessKey, "key", "", "Access Key ID for AWS")
 	flag.StringVar(&secretKey, "secret", "", "Secret Access Key for AWS")
-	flag.StringVar(&regionName, "region", "us-east-1", "Name of region for AWS")
-	flag.StringVar(&bucketName, "bucket", "", "Destination bucket name on AWS")
-	flag.StringVar(&sourcePath, "source", ".", "path of files to upload")
-	flag.BoolVar(&force, "force", false, "upload even if the etags match")
-	flag.BoolVar(&verbose, "v", false, "enable verbose logging")
+	flag.StringVar(&d.regionName, "region", "us-east-1", "Name of region for AWS")
+	flag.StringVar(&d.bucketName, "bucket", "", "Destination bucket name on AWS")
+	flag.StringVar(&d.bucketPath, "path", "", "Optional bucket sub path")
+	flag.StringVar(&d.sourcePath, "source", ".", "path of files to upload")
+	flag.BoolVar(&d.force, "force", false, "upload even if the etags match")
+	flag.BoolVar(&d.verbose, "v", false, "enable verbose logging")
 	flag.IntVar(&numberOfWorkers, "workers", -1, "number of workers to upload files")
 	flag.BoolVar(&help, "h", false, "help")
 
 	flag.Parse()
 
 	// load additional config from file if it exists
-	var err error
-	conf, err = loadConfig()
+	err := d.loadConfig()
 
 	if err != nil {
 		fmt.Printf("Failed to load config from %s: %s", configFile, err)
@@ -135,7 +150,7 @@ func main() {
 		}
 	}
 
-	if bucketName == "" {
+	if d.bucketName == "" {
 		fmt.Println("AWS bucket is required.")
 		flag.Usage()
 		os.Exit(1)
@@ -143,20 +158,20 @@ func main() {
 
 	// Get bucket with bucketName
 
-	region := aws.Regions[regionName]
+	region := aws.Regions[d.regionName]
 	s := s3.New(auth, region)
-	b := s.Bucket(bucketName)
+	b := s.Bucket(d.bucketName)
 
 	filesToUpload := make(chan file)
 	errs := make(chan error, 1)
 	for i := 0; i < numberOfWorkers; i++ {
-		wg.Add(1)
-		go worker(filesToUpload, b, errs)
+		d.wg.Add(1)
+		go d.worker(filesToUpload, b, errs)
 	}
 
-	plan(force, sourcePath, b, filesToUpload)
+	d.plan(b, filesToUpload)
 
-	wg.Wait()
+	d.wg.Wait()
 
 	// if any errors occurred during upload, exit with an error status code
 	select {
@@ -168,7 +183,7 @@ func main() {
 }
 
 // plan figures out which files need to be uploaded.
-func plan(force bool, sourcePath string, destBucket *s3.Bucket, uploadFiles chan<- file) {
+func (d *deployer) plan(destBucket *s3.Bucket, uploadFiles chan<- file) {
 	// List all files in the remote bucket
 	contents, err := destBucket.GetBucketContents()
 	if err != nil {
@@ -178,28 +193,34 @@ func plan(force bool, sourcePath string, destBucket *s3.Bucket, uploadFiles chan
 
 	// All local files at sourcePath
 	localFiles := make(chan file)
-	go walk(sourcePath, localFiles)
+	go walk(d.sourcePath, localFiles)
 
 	for f := range localFiles {
 		// default: upload because local file not found on remote.
 		up := true
 		reason := "not found"
 
-		if key, ok := remoteFiles[f.path]; ok {
-			up, reason = shouldOverwrite(f, key)
-			if force {
+		bucketPath := filepath.ToSlash(f.path)
+
+		if d.bucketPath != "" {
+			bucketPath = path.Join(d.bucketPath, bucketPath)
+		}
+
+		if key, ok := remoteFiles[bucketPath]; ok {
+			up, reason = d.shouldOverwrite(f, key)
+			if d.force {
 				up = true
 				reason = "force"
 			}
 
 			// remove from map, whatever is leftover should be deleted:
-			delete(remoteFiles, f.path)
+			delete(remoteFiles, bucketPath)
 		}
 
 		if up {
 			fmt.Printf("%s %s, uploading.\n", f.path, reason)
 			uploadFiles <- f
-		} else if verbose {
+		} else if d.verbose {
 			fmt.Printf("%s %s, skipping.\n", f.path, reason)
 		}
 	}
@@ -208,6 +229,10 @@ func plan(force bool, sourcePath string, destBucket *s3.Bucket, uploadFiles chan
 	// any remote files not found locally should be removed:
 	var filesToDelete = make([]string, 0, len(remoteFiles))
 	for key := range remoteFiles {
+		if !strings.HasPrefix(key, d.bucketPath) {
+			// Not part of this site: Keep!
+			continue
+		}
 		fmt.Printf("%s not found in source, deleting.\n", key)
 		filesToDelete = append(filesToDelete, key)
 	}
@@ -245,7 +270,7 @@ func walk(basePath string, files chan<- file) {
 }
 
 // shouldOverwrite uses size or md5 to determine what needs to be uploaded
-func shouldOverwrite(source file, dest s3.Key) (up bool, reason string) {
+func (d *deployer) shouldOverwrite(source file, dest s3.Key) (up bool, reason string) {
 
 	f, err := os.Open(source.absPath)
 	if err != nil {
@@ -258,7 +283,7 @@ func shouldOverwrite(source file, dest s3.Key) (up bool, reason string) {
 		r          io.Reader = f
 	)
 
-	route, err := findRoute(source.path)
+	route, err := d.findRoute(source.path)
 
 	if err != nil {
 		log.Fatalf("Error finding route for %s: %v", source.absPath, err)
@@ -311,9 +336,9 @@ func cleanup(paths []string, destBucket *s3.Bucket) error {
 }
 
 // worker uploads files
-func worker(filesToUpload <-chan file, destBucket *s3.Bucket, errs chan<- error) {
+func (d *deployer) worker(filesToUpload <-chan file, destBucket *s3.Bucket, errs chan<- error) {
 	for f := range filesToUpload {
-		err := upload(f, destBucket)
+		err := d.upload(f, destBucket)
 		if err != nil {
 			fmt.Printf("Error uploading %s: %s\n", f.path, err)
 			// if there are no errors on the channel, put this one there
@@ -324,10 +349,10 @@ func worker(filesToUpload <-chan file, destBucket *s3.Bucket, errs chan<- error)
 		}
 	}
 
-	wg.Done()
+	d.wg.Done()
 }
 
-func upload(source file, destBucket *s3.Bucket) error {
+func (d *deployer) upload(source file, destBucket *s3.Bucket) error {
 
 	f, err := os.Open(source.absPath)
 	if err != nil {
@@ -344,7 +369,7 @@ func upload(source file, destBucket *s3.Bucket) error {
 		"Content-Type": {contentType},
 	}
 
-	route, err := findRoute(source.path)
+	route, err := d.findRoute(source.path)
 
 	if err != nil {
 		return err
@@ -372,17 +397,24 @@ func upload(source file, destBucket *s3.Bucket) error {
 		}
 	}
 
-	return destBucket.PutReaderHeader(source.path, r, size, headers, "public-read")
+	// TODO(bep)
+	bucketPath := filepath.FromSlash(source.path)
+
+	if d.bucketPath != "" {
+		bucketPath = path.Join(d.bucketPath, bucketPath)
+	}
+
+	return destBucket.PutReaderHeader(bucketPath, r, size, headers, "public-read")
 }
 
-func findRoute(path string) (*route, error) {
-	if conf == nil {
+func (d *deployer) findRoute(path string) (*route, error) {
+	if d.conf == nil {
 		return nil, nil
 	}
 
 	var err error
 
-	for _, r := range conf.Routes {
+	for _, r := range d.conf.Routes {
 		if r.routerRE == nil {
 			r.routerRE, err = regexp.Compile(r.Route)
 
@@ -401,23 +433,26 @@ func findRoute(path string) (*route, error) {
 
 }
 
-func loadConfig() (*config, error) {
+func (d *deployer) loadConfig() error {
 
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		return nil, nil
+		return nil
 	}
 
 	data, err := ioutil.ReadFile(configFile)
 
 	if os.IsNotExist(err) {
-		return nil, nil
+		return nil
 	}
 
 	conf := &config{}
 
 	err = yaml.Unmarshal(data, conf)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return conf, nil
+
+	d.conf = conf
+
+	return nil
 }
