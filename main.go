@@ -57,6 +57,8 @@ type deployer struct {
 	sourcePath string
 	bucketName string
 
+	printVersion bool
+
 	// To have multiple sites in one bucket.
 	bucketPath string
 
@@ -97,10 +99,17 @@ func main() {
 	flag.StringVar(&d.configFile, "config", ".s3deploy.yml", "optional config file")
 	flag.BoolVar(&d.force, "force", false, "upload even if the etags match")
 	flag.BoolVar(&d.verbose, "v", false, "enable verbose logging")
+	flag.BoolVar(&d.printVersion, "V", false, "print version and exit")
 	flag.IntVar(&numberOfWorkers, "workers", -1, "number of workers to upload files")
 	flag.BoolVar(&help, "h", false, "help")
 
 	flag.Parse()
+
+	fmt.Printf("s3deploy %v, commit %v, built at %v\n", version, commit, date)
+
+	if d.printVersion {
+		return
+	}
 
 	// load additional config from file if it exists
 	err := d.loadConfig()
@@ -109,8 +118,6 @@ func main() {
 		fmt.Printf("Failed to load config from %s: %s", d.configFile, err)
 		os.Exit(-1)
 	}
-
-	fmt.Printf("s3deploy %v, commit %v, built at %v\n", version, commit, date)
 
 	if help {
 		flag.Usage()
