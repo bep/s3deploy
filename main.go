@@ -62,6 +62,9 @@ type deployer struct {
 
 	regionName string
 
+	// Optional configFile
+	configFile string
+
 	verbose bool
 	force   bool
 }
@@ -71,8 +74,6 @@ var (
 	commit  = "none"
 	date    = "unknown"
 )
-
-const configFile = ".s3deploy.yml"
 
 func main() {
 	var (
@@ -93,6 +94,7 @@ func main() {
 	flag.StringVar(&d.bucketName, "bucket", "", "Destination bucket name on AWS")
 	flag.StringVar(&d.bucketPath, "path", "", "Optional bucket sub path")
 	flag.StringVar(&d.sourcePath, "source", ".", "path of files to upload")
+	flag.StringVar(&d.configFile, "config", ".s3deploy.yml", "optional config file")
 	flag.BoolVar(&d.force, "force", false, "upload even if the etags match")
 	flag.BoolVar(&d.verbose, "v", false, "enable verbose logging")
 	flag.IntVar(&numberOfWorkers, "workers", -1, "number of workers to upload files")
@@ -104,7 +106,7 @@ func main() {
 	err := d.loadConfig()
 
 	if err != nil {
-		fmt.Printf("Failed to load config from %s: %s", configFile, err)
+		fmt.Printf("Failed to load config from %s: %s", d.configFile, err)
 		os.Exit(-1)
 	}
 
@@ -434,6 +436,12 @@ func (d *deployer) findRoute(path string) (*route, error) {
 }
 
 func (d *deployer) loadConfig() error {
+
+	configFile := d.configFile
+
+	if configFile == "" {
+		return nil
+	}
 
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		return nil
