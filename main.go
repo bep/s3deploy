@@ -58,7 +58,11 @@ func main() {
 		return
 	}
 
-	if err := lib.Deploy(cfg); err != nil {
+	stats, err := lib.Deploy(cfg)
+	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println(stats.Summary())
+
 }

@@ -58,6 +58,32 @@ type Config struct {
 	Force   bool
 }
 
+type DeployStats struct {
+	Deleted  []string
+	Uploaded []string
+	Skipped  []string
+}
+
+func (d DeployStats) Summary() string {
+	return fmt.Sprintf("Deleted: %d Uploaded: %d Skipped: %d (%.0f%% changed)", len(d.Deleted), len(d.Uploaded), len(d.Skipped), d.PercentageChanged())
+}
+
+func (d DeployStats) FileCountChanged() int {
+	return len(d.Deleted) + len(d.Uploaded)
+}
+
+func (d DeployStats) FileCount() int {
+	return d.FileCountChanged() + len(d.Skipped)
+}
+
+func (d DeployStats) PercentageChanged() float32 {
+	return (float32(d.FileCountChanged()) / float32(d.FileCount()) * 100)
+}
+
+func (d DeployStats) AllChanged() []string {
+	return append(d.Deleted, d.Uploaded...)
+}
+
 type file struct {
 	path         string // relative path
 	absPath      string // absolute path
@@ -78,12 +104,13 @@ type route struct {
 	routerRE *regexp.Regexp // compiled version of Route
 }
 
-func Deploy(cfg Config) error {
+func Deploy(cfg Config) (DeployStats, error) {
 	var (
 		d               = &Deployer{cfg: cfg}
 		numberOfWorkers = cfg.NumberOfWorkers
 		accessKey       = cfg.AccessKey
 		secretKey       = cfg.SecretKey
+		stats           DeployStats
 	)
 
 	// set to max numb of workers
@@ -97,7 +124,7 @@ func Deploy(cfg Config) error {
 	err := d.loadConfig()
 
 	if err != nil {
-		return fmt.Errorf("Failed to load config from %s: %s", cfg.ConfigFile, err)
+		return stats, fmt.Errorf("Failed to load config from %s: %s", cfg.ConfigFile, err)
 	}
 
 	var auth aws.Auth
@@ -114,18 +141,18 @@ func Deploy(cfg Config) error {
 		auth = aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
 	} else if accessKey != "" || secretKey != "" {
 		// provided one but not both
-		return errors.New("AWS key and secret are required.")
+		return stats, errors.New("AWS key and secret are required.")
 	} else {
 		// load credentials from file
 		var err error
 		auth, err = aws.SharedAuth()
 		if err != nil {
-			return errors.New("Credentials not found in ~/.aws/credentials")
+			return stats, errors.New("Credentials not found in ~/.aws/credentials")
 		}
 	}
 
 	if d.cfg.BucketName == "" {
-		return errors.New("AWS bucket is required.")
+		return stats, errors.New("AWS bucket is required.")
 	}
 
 	// Get bucket with bucketName
@@ -135,32 +162,38 @@ func Deploy(cfg Config) error {
 	b := s.Bucket(d.cfg.BucketName)
 
 	filesToUpload := make(chan file)
+	quit := make(chan struct{})
+
 	errs := make(chan error, 1)
 	for i := 0; i < numberOfWorkers; i++ {
 		d.wg.Add(1)
-		go d.worker(filesToUpload, b, errs)
+		go d.worker(filesToUpload, b, errs, quit)
 	}
 
-	d.plan(b, filesToUpload)
+	stats, err = d.plan(b, filesToUpload)
+	if err != nil {
+		close(quit)
+	}
 
 	d.wg.Wait()
 
 	// if any errors occurred during upload, exit with an error status code
 	select {
 	case <-errs:
-		return errors.New("Errors occurred while uploading files.")
+		return stats, errors.New("Errors occurred while uploading files.")
 	default:
-		return nil
+		return stats, nil
 	}
 
 }
 
 // plan figures out which files need to be uploaded.
-func (d *Deployer) plan(destBucket *s3.Bucket, uploadFiles chan<- file) {
+func (d *Deployer) plan(destBucket *s3.Bucket, uploadFiles chan<- file) (DeployStats, error) {
+	var stats DeployStats
 	// List all files in the remote bucket
 	contents, err := destBucket.GetBucketContents()
 	if err != nil {
-		log.Fatal(err)
+		return stats, err
 	}
 	remoteFiles := *contents
 
@@ -173,7 +206,7 @@ func (d *Deployer) plan(destBucket *s3.Bucket, uploadFiles chan<- file) {
 		up := true
 		reason := "not found"
 
-		bucketPath := filepath.ToSlash(f.path)
+		bucketPath := f.path
 
 		if d.cfg.BucketPath != "" {
 			bucketPath = path.Join(d.cfg.BucketPath, bucketPath)
@@ -193,8 +226,12 @@ func (d *Deployer) plan(destBucket *s3.Bucket, uploadFiles chan<- file) {
 		if up {
 			fmt.Printf("%s %s, uploading.\n", f.path, reason)
 			uploadFiles <- f
-		} else if d.cfg.Verbose {
-			fmt.Printf("%s %s, skipping.\n", f.path, reason)
+			stats.Uploaded = append(stats.Uploaded, f.path)
+		} else {
+			if d.cfg.Verbose {
+				fmt.Printf("%s %s, skipping.\n", f.path, reason)
+			}
+			stats.Skipped = append(stats.Skipped, f.path)
 		}
 	}
 	close(uploadFiles)
@@ -208,8 +245,11 @@ func (d *Deployer) plan(destBucket *s3.Bucket, uploadFiles chan<- file) {
 		}
 		fmt.Printf("%s not found in source, deleting.\n", key)
 		filesToDelete = append(filesToDelete, key)
+		stats.Deleted = append(stats.Deleted, strings.TrimPrefix(key, d.cfg.BucketPath))
 	}
 	cleanup(filesToDelete, destBucket)
+
+	return stats, nil
 }
 
 // walk a local directory
@@ -235,6 +275,7 @@ func walk(basePath string, files chan<- file) {
 			if err != nil {
 				return err
 			}
+			rel = filepath.ToSlash(rel)
 			files <- file{path: rel, absPath: abs, size: info.Size(), lastModified: info.ModTime()}
 		}
 		return nil
@@ -309,8 +350,15 @@ func cleanup(paths []string, destBucket *s3.Bucket) error {
 }
 
 // worker uploads files
-func (d *Deployer) worker(filesToUpload <-chan file, destBucket *s3.Bucket, errs chan<- error) {
+func (d *Deployer) worker(filesToUpload <-chan file, destBucket *s3.Bucket, errs chan<- error, quit chan struct{}) {
+	defer d.wg.Done()
 	for f := range filesToUpload {
+		select {
+		case <-quit:
+			return
+		default:
+		}
+
 		err := d.upload(f, destBucket)
 		if err != nil {
 			fmt.Printf("Error uploading %s: %s\n", f.path, err)
@@ -322,7 +370,6 @@ func (d *Deployer) worker(filesToUpload <-chan file, destBucket *s3.Bucket, errs
 		}
 	}
 
-	d.wg.Done()
 }
 
 func (d *Deployer) upload(source file, destBucket *s3.Bucket) error {
