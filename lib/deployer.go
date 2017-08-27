@@ -11,6 +11,7 @@ import (
 	"compress/gzip"
 	"crypto/md5"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,7 +33,7 @@ import (
 
 type Deployer struct {
 	wg  sync.WaitGroup
-	cfg Config
+	cfg *Config
 }
 
 type Config struct {
@@ -56,6 +57,11 @@ type Config struct {
 
 	Verbose bool
 	Force   bool
+
+	// CLI state
+	PrintVersion bool
+
+	Help bool
 }
 
 type DeployStats struct {
@@ -104,7 +110,29 @@ type route struct {
 	routerRE *regexp.Regexp // compiled version of Route
 }
 
-func Deploy(cfg Config) (DeployStats, error) {
+// Reads command-line flags from os.Args[1:] into Config.
+// Note that flag.Parse is not called.
+func FlagsToConfig() (*Config, error) {
+	var cfg Config
+
+	flag.StringVar(&cfg.AccessKey, "key", "", "Access Key ID for AWS")
+	flag.StringVar(&cfg.SecretKey, "secret", "", "Secret Access Key for AWS")
+	flag.StringVar(&cfg.RegionName, "region", "us-east-1", "Name of region for AWS")
+	flag.StringVar(&cfg.BucketName, "bucket", "", "Destination bucket name on AWS")
+	flag.StringVar(&cfg.BucketPath, "path", "", "Optional bucket sub path")
+	flag.StringVar(&cfg.SourcePath, "source", ".", "path of files to upload")
+	flag.StringVar(&cfg.ConfigFile, "config", ".s3deploy.yml", "optional config file")
+	flag.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")
+	flag.BoolVar(&cfg.Verbose, "v", false, "enable verbose logging")
+	flag.BoolVar(&cfg.PrintVersion, "V", false, "print version and exit")
+	flag.IntVar(&cfg.NumberOfWorkers, "workers", -1, "number of workers to upload files")
+	flag.BoolVar(&cfg.Help, "h", false, "help")
+
+	return &cfg, nil
+
+}
+
+func Deploy(cfg *Config) (DeployStats, error) {
 	var (
 		d               = &Deployer{cfg: cfg}
 		numberOfWorkers = cfg.NumberOfWorkers
