@@ -1,6 +1,7 @@
 # s3deploy
 
 [![GoDoc](https://godoc.org/github.com/bep/s3deploy?status.svg)](https://godoc.org/github.com/bep/s3deploy)
+[![CircleCI](https://circleci.com/gh/bep/s3deploy.svg?style=svg)](https://circleci.com/gh/bep/s3deploy)
 [![Release](https://img.shields.io/github/release/bep/s3deploy.svg?style=flat-square)](https://github.com/bep/s3deploy/releases/latest)
 
 A simple tool to deploy static websites to Amazon S3 with Gzip and custom headers support (e.g. "Cache-Control").
