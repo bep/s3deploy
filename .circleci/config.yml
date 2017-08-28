@@ -1,0 +1,23 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: bepsays/ci-goreleaser
+    working_directory: /go/src/github.com/bep/s3deploy
+    steps:
+      - checkout
+      - run:
+            command: |
+                go get ./...
+                goreleaser
+workflows:
+  version: 2
+  release:
+      jobs:
+        - build:
+            context: org-global
+            filters:
+              tags:
+                only: /v[0-9]+(\.[0-9]+)*(-.*)*/
+              branches:
+                ignore: /.*/

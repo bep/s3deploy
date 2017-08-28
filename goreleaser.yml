@@ -1,6 +1,8 @@
 build:
   main: main.go
   binary: s3deploy
+  env:
+    - CGO_ENABLED=0
   goos:
     - darwin
     - linux
