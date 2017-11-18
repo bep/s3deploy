@@ -22,19 +22,25 @@ Note that `s3deploy` is a perfect tool to use with a continuous integration tool
 
 ```bash
 Usage of s3deploy:
+  -V	print version and exit
   -bucket string
     	Destination bucket name on AWS
+  -config string
+    	optional config file (default ".s3deploy.yml")
   -force
     	upload even if the etags match
   -h	help
   -key string
     	Access Key ID for AWS
+  -path string
+    	Optional bucket sub path
   -region string
     	Name of region for AWS (default "us-east-1")
   -secret string
     	Secret Access Key for AWS
   -source string
     	path of files to upload (default ".")
+  -v	enable verbose logging
   -workers int
     	number of workers to upload files (default -1)
 ```
