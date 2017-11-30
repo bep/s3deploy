@@ -380,24 +380,25 @@ func cleanup(paths []string, destBucket *s3.Bucket) error {
 // worker uploads files
 func (d *Deployer) worker(filesToUpload <-chan file, destBucket *s3.Bucket, errs chan<- error, quit chan struct{}) {
 	defer d.wg.Done()
-	for f := range filesToUpload {
+	for {
 		select {
 		case <-quit:
 			return
-		default:
-		}
-
-		err := d.upload(f, destBucket)
-		if err != nil {
-			fmt.Printf("Error uploading %s: %s\n", f.path, err)
-			// if there are no errors on the channel, put this one there
-			select {
-			case errs <- err:
-			default:
+		case f, ok := <-filesToUpload:
+			if !ok {
+				return
+			}
+			err := d.upload(f, destBucket)
+			if err != nil {
+				fmt.Printf("Error uploading %s: %s\n", f.path, err)
+				// if there are no errors on the channel, put this one there
+				select {
+				case errs <- err:
+				default:
+				}
 			}
 		}
 	}
-
 }
 
 func (d *Deployer) upload(source file, destBucket *s3.Bucket) error {
