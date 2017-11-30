@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: bepsays/ci-goreleaser
+      - image: bepsays/ci-goreleaser:0.34.2-6
     working_directory: /go/src/github.com/bep/s3deploy
     steps:
       - checkout
