@@ -83,6 +83,9 @@ func (d DeployStats) FileCount() int {
 }
 
 func (d DeployStats) PercentageChanged() float32 {
+	if d.FileCount() == 0 {
+		return 0.0
+	}
 	return (float32(d.FileCountChanged()) / float32(d.FileCount()) * 100)
 }
 
