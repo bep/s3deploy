@@ -62,7 +62,7 @@ routes:
     - route: "^.+\\.(png|jpg)$"
       headers:
          Cache-Control: "max-age=630720000, no-transform, public"
-      gzip: true
+      gzip: false
     - route: "^.+\\.(html|xml|json)$"
       gzip: true   
 ``` 
