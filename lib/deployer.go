@@ -7,6 +7,7 @@
 package lib
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"crypto/md5"
@@ -16,7 +17,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"mime"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -412,10 +413,14 @@ func (d *Deployer) upload(source file, destBucket *s3.Bucket) error {
 	}
 	defer f.Close()
 
-	contentType := mime.TypeByExtension(filepath.Ext(source.path))
-	if contentType == "" {
-		contentType = "application/octet-stream"
+	br := bufio.NewReader(f)
+	const magicSize = 512 // Size that DetectContentType expects
+	peek, err := br.Peek(magicSize)
+	if err != nil {
+		return err
 	}
+
+	contentType := http.DetectContentType(peek)
 
 	headers := map[string][]string{
 		"Content-Type": {contentType},
@@ -428,7 +433,7 @@ func (d *Deployer) upload(source file, destBucket *s3.Bucket) error {
 	}
 
 	var (
-		r    io.Reader = f
+		r    io.Reader = br
 		size           = source.size
 	)
 
