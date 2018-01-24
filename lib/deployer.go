@@ -17,6 +17,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path"
@@ -414,13 +415,16 @@ func (d *Deployer) upload(source file, destBucket *s3.Bucket) error {
 	defer f.Close()
 
 	br := bufio.NewReader(f)
-	const magicSize = 512 // Size that DetectContentType expects
-	peek, err := br.Peek(magicSize)
-	if err != nil {
-		return err
-	}
+	contentType := mime.TypeByExtension(filepath.Ext(source.path))
+	if contentType == "" {
+		const magicSize = 512 // Size that DetectContentType expects
+		peek, err := br.Peek(magicSize)
+		if err != nil {
+			return err
+		}
 
-	contentType := http.DetectContentType(peek)
+		contentType = http.DetectContentType(peek)
+	}
 
 	headers := map[string][]string{
 		"Content-Type": {contentType},
