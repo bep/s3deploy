@@ -293,7 +293,7 @@ func walk(basePath string, files chan<- file) {
 		}
 		if info.IsDir() {
 			// skip hidden directories like .git
-			if strings.HasPrefix(info.Name(), ".") {
+			if path != basePath && strings.HasPrefix(info.Name(), ".") {
 				return filepath.SkipDir
 			}
 		} else {
