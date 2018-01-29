@@ -419,7 +419,7 @@ func (d *Deployer) upload(source file, destBucket *s3.Bucket) error {
 	if contentType == "" {
 		const magicSize = 512 // Size that DetectContentType expects
 		peek, err := br.Peek(magicSize)
-		if err != nil {
+		if err != nil && err != io.EOF {
 			return err
 		}
 
