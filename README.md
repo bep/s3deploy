@@ -22,31 +22,43 @@ Note that `s3deploy` is a perfect tool to use with a continuous integration tool
 
 ```bash
 Usage of s3deploy:
-  -V	print version and exit
+ -V    print version and exit
   -bucket string
-    	Destination bucket name on AWS
+        destination bucket name on AWS
   -config string
-    	optional config file (default ".s3deploy.yml")
+        optional config file (default ".s3deploy.yml")
   -force
-    	upload even if the etags match
-  -h	help
+        upload even if the etags match
+  -h    help
   -key string
-    	Access Key ID for AWS
+        access key ID for AWS
+  -max-delete int
+        maximum number of files to delete per deploy (default 256)
   -path string
-    	Optional bucket sub path
+        optional bucket sub path
+  -quiet
+        enable silent mode
   -region string
-    	Name of region for AWS (default "us-east-1")
+        name of AWS region
   -secret string
-    	Secret Access Key for AWS
+        secret access key for AWS
   -source string
-    	path of files to upload (default ".")
-  -v	enable verbose logging
+        path of files to upload (default ".")
+  -v    enable verbose logging
   -workers int
-    	number of workers to upload files (default -1)
+        number of workers to upload files (default -1)
 ```
 
 **Note:** `key` and `secret` can also be set in environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
+
+## Global AWS Configuration
+
+See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#hdr-Sessions_from_Shared_Config
+
+The `AWS SDK` will fall back to credentials from `~/.aws/credentials`.
+
+If you set the `AWS_SDK_LOAD_CONFIG` enviroment variable, it will also load shared config from `~/.aws/config` where you can set the global `region` to use if not provided etc.
 
 ## Advanced Configuration
 

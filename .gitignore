@@ -25,5 +25,6 @@ _testmain.go
 s3deploy
 *.log
 cover.out
+nohup.out
 
 dist
