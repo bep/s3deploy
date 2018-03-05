@@ -86,7 +86,7 @@ func TestDeploySourceNotFound(t *testing.T) {
 
 	stats, err := Deploy(cfg)
 	assert.Error(err)
-	assert.Contains(err.Error(), "no such file or directory")
+	assert.Contains(err.Error(), "thisdoesnotexist")
 	assert.Contains(stats.Summary(), "Deleted 0 of 0, uploaded 0, skipped 0")
 
 }
