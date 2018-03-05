@@ -27,8 +27,8 @@ fpm:
   vendor: "bep"
   homepage: "https://github.com/bep/s3deploy"
   maintainer: "<Bjørn Erik Pedersen bjorn.erik.pedersen@gmail.com>"
-  description: "A simple tool to deploy static websites to Amazon S3 with Gzip and custom headers support."
-  license: "BSD 2-clause"
+  description: "A powerful tool to deploy static websites to Amazon S3 with Gzip and custom headers support."
+  license: "MIT"
 archive:
   format: tar.gz
   format_overrides:
