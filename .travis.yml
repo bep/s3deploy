@@ -12,6 +12,8 @@ matrix:
     - go: tip
   fast_finish: true
 script:
-  - go test ./lib -coverprofile=coverage.txt -covermode=atomic
+  - go test -race ./lib -coverprofile=coverage.txt -covermode=atomic
 install:
   - go get -v -d -t ./...
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
