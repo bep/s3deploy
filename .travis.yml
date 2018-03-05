@@ -7,6 +7,10 @@ go:
 os:
   - linux
   - osx
+matrix:
+  allow_failures:
+    - go: tip
+  fast_finish: true
 script:
   - go test ./lib -coverprofile=coverage.txt -covermode=atomic
 install:
