@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -132,7 +133,7 @@ func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile, reason string) 
 
 func (d *Deployer) skipFile(f *osFile) {
 	fmt.Fprintf(d.verbosew, "%s skipping …\n", f.relPath)
-	d.stats.Skipped++
+	atomic.AddUint64(&d.stats.Skipped, uint64(1))
 }
 
 func (d *Deployer) enqueueDelete(key string) {

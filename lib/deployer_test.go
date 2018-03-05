@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -177,6 +178,8 @@ type testStore struct {
 	failAt int
 	m      map[string]file
 	remote map[string]file
+
+	sync.Mutex
 }
 
 func assertKeys(t *testing.T, m map[string]file, keys ...string) {
@@ -193,6 +196,9 @@ func assertKeys(t *testing.T, m map[string]file, keys ...string) {
 }
 
 func (s *testStore) FileMap(opts ...opOption) (map[string]file, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	if s.failAt == 1 {
 		return nil, errors.New("fail")
 	}
@@ -204,6 +210,9 @@ func (s *testStore) FileMap(opts ...opOption) (map[string]file, error) {
 }
 
 func (s *testStore) Put(ctx context.Context, f localFile, opts ...opOption) error {
+	s.Lock()
+	defer s.Unlock()
+
 	if s.failAt == 2 {
 		return errors.New("fail")
 	}
@@ -212,6 +221,9 @@ func (s *testStore) Put(ctx context.Context, f localFile, opts ...opOption) erro
 }
 
 func (s *testStore) DeleteObjects(ctx context.Context, keys []string, opts ...opOption) error {
+	s.Lock()
+	defer s.Unlock()
+
 	if s.failAt == 3 {
 		return errors.New("fail")
 	}
