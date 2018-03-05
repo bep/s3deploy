@@ -76,6 +76,10 @@ func newRemoteStore(cfg Config) (remoteStore, error) {
 		SharedConfigState: session.SharedConfigStateFromEnv,
 	})
 
+	if err != nil {
+		return nil, err
+	}
+
 	s = &s3Store{svc: s3.New(sess), bucket: cfg.BucketName, r: cfg.conf.Routes}
 
 	return newStore(s), nil

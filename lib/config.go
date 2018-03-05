@@ -9,6 +9,7 @@ import (
 	"flag"
 )
 
+// Config configures a deployment.
 type Config struct {
 	conf fileConfig
 
@@ -41,7 +42,7 @@ type Config struct {
 	store remoteStore
 }
 
-// Reads command-line flags from os.Args[1:] into Config.
+// FlagsToConfig reads command-line flags from os.Args[1:] into Config.
 // Note that flag.Parse is not called.
 func FlagsToConfig() (*Config, error) {
 	var cfg Config

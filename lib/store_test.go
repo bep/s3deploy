@@ -17,8 +17,8 @@ func TestChunkStrings(t *testing.T) {
 	c1 := chunkStrings([]string{"a", "b", "c", "d"}, 2)
 	c2 := chunkStrings([]string{"a", "b", "c", "d"}, 3)
 	c3 := chunkStrings([]string{}, 2)
-	assert.Equal([][]string{[]string{"a", "b"}, []string{"c", "d"}}, c1)
-	assert.Equal([][]string{[]string{"a", "b", "c"}, []string{"d"}}, c2)
+	assert.Equal([][]string{{"a", "b"}, {"c", "d"}}, c1)
+	assert.Equal([][]string{{"a", "b", "c"}, {"d"}}, c2)
 	assert.Equal(0, len(c3))
 
 }
