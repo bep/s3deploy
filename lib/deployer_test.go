@@ -98,7 +98,7 @@ func TestDeployInvalidSourcePath(t *testing.T) {
 	store, _ := newTestStore(0)
 	root := "/"
 
-	if runtime.GOOS == "window" {
+	if runtime.GOOS == "windows" {
 		root = `C:\`
 	}
 
