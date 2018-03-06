@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestDeploy(t *testing.T) {
 		MaxDelete:  300,
 		Silent:     true,
 		SourcePath: source,
-		baseStore:      store,
+		baseStore:  store,
 	}
 
 	stats, err := Deploy(cfg)
@@ -62,7 +63,7 @@ func TestDeployForce(t *testing.T) {
 		MaxDelete:  300,
 		Silent:     true,
 		SourcePath: source,
-		baseStore:      store,
+		baseStore:  store,
 	}
 
 	stats, err := Deploy(cfg)
@@ -82,12 +83,37 @@ func TestDeploySourceNotFound(t *testing.T) {
 		MaxDelete:  300,
 		Silent:     true,
 		SourcePath: source,
-		baseStore:      store,
+		baseStore:  store,
 	}
 
 	stats, err := Deploy(cfg)
 	assert.Error(err)
 	assert.Contains(err.Error(), "thisdoesnotexist")
+	assert.Contains(stats.Summary(), "Deleted 0 of 0, uploaded 0, skipped 0")
+
+}
+
+func TestDeployInvalidSourcePath(t *testing.T) {
+	assert := require.New(t)
+	store, _ := newTestStore(0)
+	root := "/"
+
+	if runtime.GOOS == "window" {
+		root = `C:\`
+	}
+
+	cfg := &Config{
+		BucketName: "example.com",
+		RegionName: "eu-west-1",
+		MaxDelete:  300,
+		Silent:     true,
+		SourcePath: root,
+		baseStore:  store,
+	}
+
+	stats, err := Deploy(cfg)
+	assert.Error(err)
+	assert.Contains(err.Error(), "invalid source path")
 	assert.Contains(stats.Summary(), "Deleted 0 of 0, uploaded 0, skipped 0")
 
 }
@@ -111,7 +137,7 @@ func TestDeployStoreFailures(t *testing.T) {
 			MaxDelete:  300,
 			Silent:     true,
 			SourcePath: source,
-			baseStore:      store,
+			baseStore:  store,
 		}
 
 		message := fmt.Sprintf("Failure %d", i)
@@ -145,7 +171,7 @@ func TestDeployMaxDelete(t *testing.T) {
 		Silent:     true,
 		SourcePath: testSourcePath(),
 		MaxDelete:  42,
-		baseStore:      store,
+		baseStore:  store,
 	}
 
 	stats, err := Deploy(cfg)

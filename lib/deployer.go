@@ -57,7 +57,15 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		defer func() {
 			fmt.Printf("\nTotal in %.2f seconds\n", time.Since(start).Seconds())
 		}()
+	}
 
+	cfg.SourcePath = filepath.Clean(cfg.SourcePath)
+
+	// Sanity check to preven people from uploading their entire disk.
+	// The returned path from  ends filepath.Clean ends in a slash only if it represents
+	// a root directory, such as "/" on Unix or `C:\` on Windows.
+	if strings.HasSuffix(cfg.SourcePath, string(os.PathSeparator)) {
+		return DeployStats{}, errors.New("invalid source path: Cannot deploy from root")
 	}
 
 	var outv, out io.Writer = ioutil.Discard, os.Stdout
