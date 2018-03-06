@@ -8,7 +8,7 @@ jobs:
       - checkout
       - run:
             command: |
-                go get ./...
+                go get -u -d ./...
                 goreleaser
 workflows:
   version: 2
