@@ -6,7 +6,11 @@
 package lib
 
 import (
+	"errors"
 	"flag"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 // Config configures a deployment.
@@ -66,4 +70,22 @@ func FlagsToConfig() (*Config, error) {
 
 	return &cfg, nil
 
+}
+
+func (cfg *Config) check() error {
+
+	if cfg.BucketName == "" {
+		return errors.New("AWS bucket is required")
+	}
+
+	cfg.SourcePath = filepath.Clean(cfg.SourcePath)
+
+	// Sanity check to prevent people from uploading their entire disk.
+	// The returned path from filepath.Clean ends in a slash only if it represents
+	// a root directory, such as "/" on Unix or `C:\` on Windows.
+	if strings.HasSuffix(cfg.SourcePath, string(os.PathSeparator)) {
+		return errors.New("invalid source path: Cannot deploy from root")
+	}
+
+	return nil
 }

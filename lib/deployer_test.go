@@ -183,7 +183,7 @@ func TestDeployMaxDelete(t *testing.T) {
 
 func testSourcePath() string {
 	wd, _ := os.Getwd()
-	return filepath.Join(wd, "testdata")
+	return filepath.Join(wd, "testdata") + "/"
 }
 
 func newTestStore(failAt int) (remoteStore, map[string]file) {

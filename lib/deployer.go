@@ -7,7 +7,6 @@ package lib
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -52,44 +51,37 @@ type upload struct {
 
 // Deploy deploys to the remote based on the given config.
 func Deploy(cfg *Config) (DeployStats, error) {
-	if !cfg.Silent {
+	if err := cfg.check(); err != nil {
+		return DeployStats{}, err
+	}
+
+	var outv, out io.Writer = ioutil.Discard, os.Stdout
+	if cfg.Silent {
+		out = ioutil.Discard
+	} else {
+		if cfg.Verbose {
+			outv = os.Stdout
+		}
 		start := time.Now()
 		defer func() {
 			fmt.Printf("\nTotal in %.2f seconds\n", time.Since(start).Seconds())
 		}()
 	}
 
-	cfg.SourcePath = filepath.Clean(cfg.SourcePath)
-
-	// Sanity check to prevent people from uploading their entire disk.
-	// The returned path from filepath.Clean ends filepath.Clean ends in a slash only if it represents
-	// a root directory, such as "/" on Unix or `C:\` on Windows.
-	if strings.HasSuffix(cfg.SourcePath, string(os.PathSeparator)) {
-		return DeployStats{}, errors.New("invalid source path: Cannot deploy from root")
-	}
-
-	var outv, out io.Writer = ioutil.Discard, os.Stdout
-	if cfg.Verbose && !cfg.Silent {
-		outv = os.Stdout
-	}
-	if cfg.Silent {
-		out = ioutil.Discard
-	}
-
 	var g *errgroup.Group
-
 	ctx, cancel := context.WithCancel(context.Background())
 	g, ctx = errgroup.WithContext(ctx)
 	defer cancel()
 
-	var d = &Deployer{g: g, outv: outv, out: out, filesToUpload: make(chan *osFile), cfg: cfg, stats: &DeployStats{}}
-
-	if d.cfg.BucketName == "" {
-		return *d.stats, errors.New("AWS bucket is required")
-	}
+	var d = &Deployer{
+		g:             g,
+		outv:          outv,
+		out:           out,
+		filesToUpload: make(chan *osFile),
+		cfg:           cfg,
+		stats:         &DeployStats{}}
 
 	numberOfWorkers := cfg.NumberOfWorkers
-
 	if numberOfWorkers <= 0 {
 		numberOfWorkers = runtime.NumCPU()
 	}
@@ -107,12 +99,10 @@ func Deploy(cfg *Config) (DeployStats, error) {
 			return *d.stats, err
 		}
 	}
-
 	if d.cfg.Try {
 		baseStore = newNoUpdateStore(baseStore)
 		fmt.Fprintln(d.out, "This is a trial run, with no remote updates.")
 	}
-
 	d.store = newStore(baseStore)
 
 	for i := 0; i < numberOfWorkers; i++ {
@@ -182,7 +172,6 @@ func (d *Deployer) plan(ctx context.Context) error {
 		reason := "not found"
 
 		bucketPath := f.relPath
-
 		if d.cfg.BucketPath != "" {
 			bucketPath = path.Join(d.cfg.BucketPath, bucketPath)
 		}
@@ -194,7 +183,6 @@ func (d *Deployer) plan(ctx context.Context) error {
 			} else {
 				up, reason = f.shouldThisReplace(remoteFile)
 			}
-
 			// remove from map, whatever is leftover should be deleted:
 			delete(remoteFiles, bucketPath)
 		}
