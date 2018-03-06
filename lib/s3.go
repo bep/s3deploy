@@ -82,7 +82,7 @@ func newRemoteStore(cfg Config) (remoteStore, error) {
 
 	s = &s3Store{svc: s3.New(sess), bucket: cfg.BucketName, r: cfg.conf.Routes}
 
-	return newStore(s), nil
+	return s, nil
 
 }
 

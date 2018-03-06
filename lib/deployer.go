@@ -25,6 +25,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const up = `↑`
+
 // Deployer deploys.
 type Deployer struct {
 	cfg   *Config
@@ -35,7 +37,10 @@ type Deployer struct {
 	filesToUpload chan *osFile
 	filesToDelete []string
 
-	verbosew io.Writer
+	// Verbose output.
+	outv io.Writer
+	// Regular output.
+	out io.Writer
 
 	store remoteStore
 }
@@ -50,14 +55,17 @@ func Deploy(cfg *Config) (DeployStats, error) {
 	if !cfg.Silent {
 		start := time.Now()
 		defer func() {
-			fmt.Printf("Total in %.2f seconds\n", time.Since(start).Seconds())
+			fmt.Printf("\nTotal in %.2f seconds\n", time.Since(start).Seconds())
 		}()
 
 	}
 
-	verbosew := ioutil.Discard
+	var outv, out io.Writer = ioutil.Discard, os.Stdout
 	if cfg.Verbose && !cfg.Silent {
-		verbosew = os.Stdout
+		outv = os.Stdout
+	}
+	if cfg.Silent {
+		out = ioutil.Discard
 	}
 
 	var g *errgroup.Group
@@ -66,7 +74,7 @@ func Deploy(cfg *Config) (DeployStats, error) {
 	g, ctx = errgroup.WithContext(ctx)
 	defer cancel()
 
-	var d = &Deployer{g: g, verbosew: verbosew, filesToUpload: make(chan *osFile), cfg: cfg, stats: &DeployStats{}}
+	var d = &Deployer{g: g, outv: outv, out: out, filesToUpload: make(chan *osFile), cfg: cfg, stats: &DeployStats{}}
 
 	if d.cfg.BucketName == "" {
 		return *d.stats, errors.New("AWS bucket is required")
@@ -84,14 +92,20 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		return *d.stats, fmt.Errorf("Failed to load config from %s: %s", cfg.ConfigFile, err)
 	}
 
-	store := d.cfg.store
-	if store == nil {
-		store, err = newRemoteStore(*d.cfg)
+	baseStore := d.cfg.baseStore
+	if baseStore == nil {
+		baseStore, err = newRemoteStore(*d.cfg)
 		if err != nil {
 			return *d.stats, err
 		}
 	}
-	d.store = store
+
+	if d.cfg.Try {
+		baseStore = newNoUpdateStore(baseStore)
+		fmt.Fprintln(d.out, "This is a trial run, with no remote updates.")
+	}
+
+	d.store = newStore(baseStore)
 
 	for i := 0; i < numberOfWorkers; i++ {
 		g.Go(func() error {
@@ -124,7 +138,7 @@ func Deploy(cfg *Config) (DeployStats, error) {
 }
 
 func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile, reason string) {
-	fmt.Fprintf(d.verbosew, "%s (%s) uploading …\n", f.relPath, reason)
+	fmt.Fprintf(d.out, "%s (%s) %s ", f.relPath, reason, up)
 	select {
 	case <-ctx.Done():
 	case d.filesToUpload <- f:
@@ -132,12 +146,12 @@ func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile, reason string) 
 }
 
 func (d *Deployer) skipFile(f *osFile) {
-	fmt.Fprintf(d.verbosew, "%s skipping …\n", f.relPath)
+	fmt.Fprintf(d.outv, "%s skipping …\n", f.relPath)
 	atomic.AddUint64(&d.stats.Skipped, uint64(1))
 }
 
 func (d *Deployer) enqueueDelete(key string) {
-	fmt.Fprintf(d.verbosew, "%s not found in source, deleting.\n", key)
+	fmt.Fprintf(d.outv, "%s not found in source, deleting.\n", key)
 	d.filesToDelete = append(d.filesToDelete, key)
 }
 

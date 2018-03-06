@@ -34,7 +34,7 @@ func TestDeploy(t *testing.T) {
 		MaxDelete:  300,
 		Silent:     true,
 		SourcePath: source,
-		store:      store,
+		baseStore:      store,
 	}
 
 	stats, err := Deploy(cfg)
@@ -62,7 +62,7 @@ func TestDeployForce(t *testing.T) {
 		MaxDelete:  300,
 		Silent:     true,
 		SourcePath: source,
-		store:      store,
+		baseStore:      store,
 	}
 
 	stats, err := Deploy(cfg)
@@ -82,7 +82,7 @@ func TestDeploySourceNotFound(t *testing.T) {
 		MaxDelete:  300,
 		Silent:     true,
 		SourcePath: source,
-		store:      store,
+		baseStore:      store,
 	}
 
 	stats, err := Deploy(cfg)
@@ -111,7 +111,7 @@ func TestDeployStoreFailures(t *testing.T) {
 			MaxDelete:  300,
 			Silent:     true,
 			SourcePath: source,
-			store:      store,
+			baseStore:      store,
 		}
 
 		message := fmt.Sprintf("Failure %d", i)
@@ -145,7 +145,7 @@ func TestDeployMaxDelete(t *testing.T) {
 		Silent:     true,
 		SourcePath: testSourcePath(),
 		MaxDelete:  42,
-		store:      store,
+		baseStore:      store,
 	}
 
 	stats, err := Deploy(cfg)
@@ -171,7 +171,7 @@ func newTestStore(failAt int) (remoteStore, map[string]file) {
 }
 
 func newTestStoreFrom(m map[string]file, failAt int) remoteStore {
-	return newStore(&testStore{m: m, failAt: failAt})
+	return &testStore{m: m, failAt: failAt}
 }
 
 type testStore struct {

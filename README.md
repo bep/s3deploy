@@ -25,7 +25,7 @@ Note that `s3deploy` is a perfect tool to use with a continuous integration tool
 
 ```bash
 Usage of s3deploy:
- -V    print version and exit
+  -V    print version and exit
   -bucket string
         destination bucket name on AWS
   -config string
@@ -47,6 +47,8 @@ Usage of s3deploy:
         secret access key for AWS
   -source string
         path of files to upload (default ".")
+  -try
+        trial run, no remote updates
   -v    enable verbose logging
   -workers int
         number of workers to upload files (default -1)

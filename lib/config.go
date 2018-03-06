@@ -32,6 +32,7 @@ type Config struct {
 	Verbose bool
 	Silent  bool
 	Force   bool
+	Try     bool
 
 	// CLI state
 	PrintVersion bool
@@ -39,7 +40,7 @@ type Config struct {
 	Help bool
 
 	// Mostly useful for testing.
-	store remoteStore
+	baseStore remoteStore
 }
 
 // FlagsToConfig reads command-line flags from os.Args[1:] into Config.
@@ -56,6 +57,7 @@ func FlagsToConfig() (*Config, error) {
 	flag.StringVar(&cfg.ConfigFile, "config", ".s3deploy.yml", "optional config file")
 	flag.IntVar(&cfg.MaxDelete, "max-delete", 256, "maximum number of files to delete per deploy")
 	flag.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")
+	flag.BoolVar(&cfg.Try, "try", false, "trial run, no remote updates")
 	flag.BoolVar(&cfg.Verbose, "v", false, "enable verbose logging")
 	flag.BoolVar(&cfg.Silent, "quiet", false, "enable silent mode")
 	flag.BoolVar(&cfg.PrintVersion, "V", false, "print version and exit")

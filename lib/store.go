@@ -90,6 +90,29 @@ func (s *store) DeleteObjects(ctx context.Context, keys []string, opts ...opOpti
 	return nil
 }
 
+type noUpdateStore struct {
+	readOps remoteStore
+}
+
+func newNoUpdateStore(base remoteStore) remoteStore {
+	return &noUpdateStore{readOps: base}
+}
+
+func (s *noUpdateStore) FileMap(opts ...opOption) (map[string]file, error) {
+	if s.readOps != nil {
+		return s.readOps.FileMap(opts...)
+	}
+	return make(map[string]file), nil
+}
+
+func (s *noUpdateStore) Put(ctx context.Context, f localFile, opts ...opOption) error {
+	return nil
+}
+
+func (s *noUpdateStore) DeleteObjects(ctx context.Context, keys []string, opts ...opOption) error {
+	return nil
+}
+
 type opConfig struct {
 	maxDelete      int
 	statsCollector func(handled, skipped int)

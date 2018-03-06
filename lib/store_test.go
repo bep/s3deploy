@@ -6,6 +6,7 @@
 package lib
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,5 +21,14 @@ func TestChunkStrings(t *testing.T) {
 	assert.Equal([][]string{{"a", "b"}, {"c", "d"}}, c1)
 	assert.Equal([][]string{{"a", "b", "c"}, {"d"}}, c2)
 	assert.Equal(0, len(c3))
+}
 
+func TestNoUpdateStore(t *testing.T) {
+	store := new(noUpdateStore)
+	assert := require.New(t)
+	m, err := store.FileMap()
+	assert.NoError(err)
+	assert.Equal(0, len(m))
+	assert.NoError(store.DeleteObjects(context.Background(), nil))
+	assert.NoError(store.Put(context.Background(), nil))
 }
