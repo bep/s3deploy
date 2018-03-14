@@ -93,5 +93,5 @@ func openTestFile(name string) (*osFile, error) {
 		return nil, err
 	}
 
-	return newOSFile(nil, relPath, absPath, fi)
+	return newOSFile(nil, "", relPath, absPath, fi)
 }

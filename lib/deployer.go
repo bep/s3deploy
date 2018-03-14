@@ -234,7 +234,7 @@ func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFi
 		if err != nil {
 			return err
 		}
-		f, err := newOSFile(d.cfg.conf.Routes, rel, abs, info)
+		f, err := newOSFile(d.cfg.conf.Routes, d.cfg.BucketPath, rel, abs, info)
 		if err != nil {
 			return err
 		}

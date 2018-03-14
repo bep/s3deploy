@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -24,7 +25,7 @@ var (
 
 func TestDeploy(t *testing.T) {
 	assert := require.New(t)
-	store, m := newTestStore(0)
+	store, m := newTestStore(0, "")
 	source := testSourcePath()
 	configFile := filepath.Join(source, ".s3deploy.yml")
 
@@ -51,9 +52,40 @@ func TestDeploy(t *testing.T) {
 	assert.Equal("max-age=630720000, no-transform, public", headers["Cache-Control"])
 }
 
+func TestDeployWithBucketPath(t *testing.T) {
+	assert := require.New(t)
+	root := "my/path"
+	store, m := newTestStore(0, root)
+	source := testSourcePath()
+	configFile := filepath.Join(source, ".s3deploy.yml")
+
+	cfg := &Config{
+		BucketName: "example.com",
+		RegionName: "eu-west-1",
+		ConfigFile: configFile,
+		BucketPath: root,
+		MaxDelete:  300,
+		Silent:     false,
+		SourcePath: source,
+		baseStore:  store,
+	}
+
+	stats, err := Deploy(cfg)
+	assert.NoError(err)
+	assert.Equal("Deleted 1 of 1, uploaded 3, skipped 1 (80% changed)", stats.Summary())
+	assertKeys(t, m, "my/path/.s3deploy.yml", "my/path/main.css", "my/path/index.html", "my/path/ab.txt")
+	fmt.Println(">>>", m)
+	mainCss := m["my/path/main.css"]
+	assert.IsType(&osFile{}, mainCss)
+	assert.Equal("my/path/main.css", mainCss.(*osFile).Key())
+	headers := mainCss.(*osFile).Headers()
+	assert.Equal("gzip", headers["Content-Encoding"])
+
+}
+
 func TestDeployForce(t *testing.T) {
 	assert := require.New(t)
-	store, _ := newTestStore(0)
+	store, _ := newTestStore(0, "")
 	source := testSourcePath()
 
 	cfg := &Config{
@@ -73,7 +105,7 @@ func TestDeployForce(t *testing.T) {
 
 func TestDeploySourceNotFound(t *testing.T) {
 	assert := require.New(t)
-	store, _ := newTestStore(0)
+	store, _ := newTestStore(0, "")
 	wd, _ := os.Getwd()
 	source := filepath.Join(wd, "thisdoesnotexist")
 
@@ -95,7 +127,7 @@ func TestDeploySourceNotFound(t *testing.T) {
 
 func TestDeployInvalidSourcePath(t *testing.T) {
 	assert := require.New(t)
-	store, _ := newTestStore(0)
+	store, _ := newTestStore(0, "")
 	root := "/"
 
 	if runtime.GOOS == "windows" {
@@ -128,7 +160,7 @@ func TestDeployStoreFailures(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		assert := require.New(t)
 
-		store, _ := newTestStore(i)
+		store, _ := newTestStore(i, "")
 		source := testSourcePath()
 
 		cfg := &Config{
@@ -186,11 +218,11 @@ func testSourcePath() string {
 	return filepath.Join(wd, "testdata") + "/"
 }
 
-func newTestStore(failAt int) (remoteStore, map[string]file) {
+func newTestStore(failAt int, root string) (remoteStore, map[string]file) {
 	m := map[string]file{
-		"ab.txt":       &testFile{key: "ab.txt", etag: `"7b0ded95031647702b8bed17dce7698a"`, size: int64(3)},
-		"main.css":     &testFile{key: "main.css", etag: `"changed"`, size: int64(27)},
-		"deleteme.txt": &testFile{},
+		path.Join(root, "ab.txt"):       &testFile{key: path.Join(root, "ab.txt"), etag: `"7b0ded95031647702b8bed17dce7698a"`, size: int64(3)},
+		path.Join(root, "main.css"):     &testFile{key: path.Join(root, "main.css"), etag: `"changed"`, size: int64(27)},
+		path.Join(root, "deleteme.txt"): &testFile{},
 	}
 
 	return newTestStoreFrom(m, failAt), m

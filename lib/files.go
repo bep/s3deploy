@@ -16,6 +16,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sync"
@@ -29,6 +30,7 @@ var (
 )
 
 type file interface {
+	// Key represents the key on the target file store.
 	Key() string
 	ETag() string
 	Size() int64
@@ -47,6 +49,11 @@ type localFile interface {
 
 type osFile struct {
 	relPath string
+
+	// Filled when BucketPath is provided. Will store files in a sub-path
+	// of the target file store.
+	targetRoot string
+
 	absPath string
 	size    int64
 
@@ -61,6 +68,9 @@ type osFile struct {
 }
 
 func (f *osFile) Key() string {
+	if f.targetRoot != "" {
+		return path.Join(f.targetRoot, f.relPath)
+	}
 	return f.relPath
 }
 
@@ -150,7 +160,7 @@ func (f *osFile) shouldThisReplace(other file) (bool, string) {
 	return false, ""
 }
 
-func newOSFile(routes routes, relPath, absPath string, fi os.FileInfo) (*osFile, error) {
+func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInfo) (*osFile, error) {
 	relPath = filepath.ToSlash(relPath)
 
 	file, err := os.Open(absPath)
@@ -181,7 +191,7 @@ func newOSFile(routes routes, relPath, absPath string, fi os.FileInfo) (*osFile,
 		mFile = memfile.New(b)
 	}
 
-	of := &osFile{route: route, f: mFile, absPath: absPath, relPath: relPath, size: size}
+	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: absPath, relPath: relPath, size: size}
 
 	if err := of.initContentType(); err != nil {
 		return nil, err
