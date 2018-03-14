@@ -74,7 +74,6 @@ func TestDeployWithBucketPath(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal("Deleted 1 of 1, uploaded 3, skipped 1 (80% changed)", stats.Summary())
 	assertKeys(t, m, "my/path/.s3deploy.yml", "my/path/main.css", "my/path/index.html", "my/path/ab.txt")
-	fmt.Println(">>>", m)
 	mainCss := m["my/path/main.css"]
 	assert.IsType(&osFile{}, mainCss)
 	assert.Equal("my/path/main.css", mainCss.(*osFile).Key())
