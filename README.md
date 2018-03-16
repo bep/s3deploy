@@ -16,7 +16,7 @@ Pre-built binaries can be found [here](https://github.com/bep/s3deploy/releases/
 **s3deploy** is a [Go application](https://golang.org/doc/install), so you can also get and build it yourself via `go get`:
 
 ```bash
- go get -v github.com/bep/s3deploy
+ go get -u -v github.com/bep/s3deploy
  ```
  
 Note that `s3deploy` is a perfect tool to use with a continuous integration tool such as [CircleCI](https://circleci.com/). See [this static site](https://github.com/bep/bego.io) for a simple example of automated depoloyment of a Hugo site to Amazon S3 via `s3deploy`.  The most relevant files are [circle.yml](https://github.com/bep/bego.io/blob/master/circle.yml) and [.s3deploy.yml](https://github.com/bep/bego.io/blob/master/.s3deploy.yml).
