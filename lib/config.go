@@ -50,26 +50,29 @@ type Config struct {
 // FlagsToConfig reads command-line flags from os.Args[1:] into Config.
 // Note that flag.Parse is not called.
 func FlagsToConfig() (*Config, error) {
+	return flagsToConfig(flag.CommandLine)
+}
+
+func flagsToConfig(f *flag.FlagSet) (*Config, error) {
 	var cfg Config
 
-	flag.StringVar(&cfg.AccessKey, "key", "", "access key ID for AWS")
-	flag.StringVar(&cfg.SecretKey, "secret", "", "secret access key for AWS")
-	flag.StringVar(&cfg.RegionName, "region", "", "name of AWS region")
-	flag.StringVar(&cfg.BucketName, "bucket", "", "destination bucket name on AWS")
-	flag.StringVar(&cfg.BucketPath, "path", "", "optional bucket sub path")
-	flag.StringVar(&cfg.SourcePath, "source", ".", "path of files to upload")
-	flag.StringVar(&cfg.ConfigFile, "config", ".s3deploy.yml", "optional config file")
-	flag.IntVar(&cfg.MaxDelete, "max-delete", 256, "maximum number of files to delete per deploy")
-	flag.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")
-	flag.BoolVar(&cfg.Try, "try", false, "trial run, no remote updates")
-	flag.BoolVar(&cfg.Verbose, "v", false, "enable verbose logging")
-	flag.BoolVar(&cfg.Silent, "quiet", false, "enable silent mode")
-	flag.BoolVar(&cfg.PrintVersion, "V", false, "print version and exit")
-	flag.IntVar(&cfg.NumberOfWorkers, "workers", -1, "number of workers to upload files")
-	flag.BoolVar(&cfg.Help, "h", false, "help")
+	f.StringVar(&cfg.AccessKey, "key", "", "access key ID for AWS")
+	f.StringVar(&cfg.SecretKey, "secret", "", "secret access key for AWS")
+	f.StringVar(&cfg.RegionName, "region", "", "name of AWS region")
+	f.StringVar(&cfg.BucketName, "bucket", "", "destination bucket name on AWS")
+	f.StringVar(&cfg.BucketPath, "path", "", "optional bucket sub path")
+	f.StringVar(&cfg.SourcePath, "source", ".", "path of files to upload")
+	f.StringVar(&cfg.ConfigFile, "config", ".s3deploy.yml", "optional config file")
+	f.IntVar(&cfg.MaxDelete, "max-delete", 256, "maximum number of files to delete per deploy")
+	f.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")
+	f.BoolVar(&cfg.Try, "try", false, "trial run, no remote updates")
+	f.BoolVar(&cfg.Verbose, "v", false, "enable verbose logging")
+	f.BoolVar(&cfg.Silent, "quiet", false, "enable silent mode")
+	f.BoolVar(&cfg.PrintVersion, "V", false, "print version and exit")
+	f.IntVar(&cfg.NumberOfWorkers, "workers", -1, "number of workers to upload files")
+	f.BoolVar(&cfg.Help, "h", false, "help")
 
 	return &cfg, nil
-
 }
 
 func (cfg *Config) check() error {
