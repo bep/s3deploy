@@ -114,7 +114,7 @@ func (f *osFile) Headers() map[string]string {
 	return headers
 }
 
-func (f *osFile) initContentType() error {
+func (f *osFile) initContentType(peek []byte) error {
 	if f.route != nil {
 		if contentType, found := f.route.Headers["Content-Type"]; found {
 			f.contentType = contentType
@@ -129,7 +129,11 @@ func (f *osFile) initContentType() error {
 	}
 
 	// Have to look inside the file itself.
-	f.contentType = detectContentTypeFromContent(f.f.Bytes())
+	if peek != nil {
+		f.contentType = detectContentTypeFromContent(peek)
+	} else {
+		f.contentType = detectContentTypeFromContent(f.f.Bytes())
+	}
 
 	return nil
 }
@@ -172,6 +176,7 @@ func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInf
 	var (
 		mFile *memfile.File
 		size  = fi.Size()
+		peek  []byte
 	)
 
 	route := routes.get(relPath)
@@ -183,6 +188,8 @@ func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInf
 		gz.Close()
 		mFile = memfile.New(b.Bytes())
 		size = int64(b.Len())
+		peek = make([]byte, 512)
+		file.Read(peek)
 	} else {
 		b, err := ioutil.ReadAll(file)
 		if err != nil {
@@ -193,7 +200,7 @@ func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInf
 
 	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: absPath, relPath: relPath, size: size}
 
-	if err := of.initContentType(); err != nil {
+	if err := of.initContentType(peek); err != nil {
 		return nil, err
 	}
 
