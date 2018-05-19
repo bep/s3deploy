@@ -37,6 +37,8 @@ func TestDeploy(t *testing.T) {
 		Silent:     true,
 		SourcePath: source,
 		baseStore:  store,
+		SecretKey:  "W2DiwFbMo4",
+		AccessKey:  "p39963JRBu",
 	}
 
 	stats, err := Deploy(cfg)
@@ -68,6 +70,8 @@ func TestDeployWithBucketPath(t *testing.T) {
 		Silent:     false,
 		SourcePath: source,
 		baseStore:  store,
+		SecretKey:  "W2DiwFbMo4",
+		AccessKey:  "p39963JRBu",
 	}
 
 	stats, err := Deploy(cfg)
@@ -95,6 +99,8 @@ func TestDeployForce(t *testing.T) {
 		Silent:     true,
 		SourcePath: source,
 		baseStore:  store,
+		SecretKey:  "W2DiwFbMo4",
+		AccessKey:  "p39963JRBu",
 	}
 
 	stats, err := Deploy(cfg)
@@ -115,6 +121,8 @@ func TestDeploySourceNotFound(t *testing.T) {
 		Silent:     true,
 		SourcePath: source,
 		baseStore:  store,
+		SecretKey:  "W2DiwFbMo4",
+		AccessKey:  "p39963JRBu",
 	}
 
 	stats, err := Deploy(cfg)
@@ -140,6 +148,8 @@ func TestDeployInvalidSourcePath(t *testing.T) {
 		Silent:     true,
 		SourcePath: root,
 		baseStore:  store,
+		SecretKey:  "W2DiwFbMo4",
+		AccessKey:  "p39963JRBu",
 	}
 
 	stats, err := Deploy(cfg)
@@ -169,6 +179,8 @@ func TestDeployStoreFailures(t *testing.T) {
 			Silent:     true,
 			SourcePath: source,
 			baseStore:  store,
+			SecretKey:  "W2DiwFbMo4",
+			AccessKey:  "p39963JRBu",
 		}
 
 		message := fmt.Sprintf("Failure %d", i)
@@ -203,6 +215,8 @@ func TestDeployMaxDelete(t *testing.T) {
 		SourcePath: testSourcePath(),
 		MaxDelete:  42,
 		baseStore:  store,
+		SecretKey:  "W2DiwFbMo4",
+		AccessKey:  "p39963JRBu",
 	}
 
 	stats, err := Deploy(cfg)
