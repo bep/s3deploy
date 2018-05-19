@@ -77,8 +77,18 @@ func flagsToConfig(f *flag.FlagSet) (*Config, error) {
 
 func (cfg *Config) check() error {
 
+	// Generate error messages for required command flags
 	if cfg.BucketName == "" {
 		return errors.New("AWS bucket is required")
+	}
+	if cfg.RegionName == "" {
+		return errors.New("AWS region is required")
+	}
+	if cfg.SecretKey == "" {
+		return errors.New("AWS secret key is required")
+	}
+	if cfg.AccessKey == "" {
+		return errors.New("AWS access key is required")
 	}
 
 	cfg.SourcePath = filepath.Clean(cfg.SourcePath)
