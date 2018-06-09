@@ -45,3 +45,18 @@ func TestFlagsToConfig(t *testing.T) {
 	assert.Equal("myregion", cfg.RegionName)
 
 }
+
+func TestSettingsFileToConfig(t *testing.T) {
+	assert := require.New(t)
+	flags := flag.NewFlagSet("testSettingsFile", flag.PanicOnError)
+
+	cfg, err := flagsToConfig(flags)
+	assert.NoError(err)
+	assert.NoError(flags.Parse([]string{"-source=testdata/.s3deploy.yml"}))
+
+	assert.Equal("mybucket", cfg.BucketName)
+	assert.Equal("mykey", cfg.AccessKey)
+	assert.Equal("mysecret", cfg.SecretKey)
+	assert.Equal("myregion", cfg.RegionName)
+	assert.Equal("mysource", cfg.SourcePath)
+}
