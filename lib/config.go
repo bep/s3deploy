@@ -20,15 +20,15 @@ import (
 type Config struct {
 	conf fileConfig
 
-	AccessKey string
-	SecretKey string
+	AccessKey string `yaml:"key"`
+	SecretKey string `yaml:"secret"`
 
-	SourcePath string
-	BucketName string
+	SourcePath string `yaml:"source"`
+	BucketName string `yaml:"bucket"`
 
 	// To have multiple sites in one bucket.
 	BucketPath string
-	RegionName string
+	RegionName string `yaml:"region"`
 
 	// Optional configFile
 	ConfigFile string
@@ -48,15 +48,6 @@ type Config struct {
 
 	// Mostly useful for testing.
 	baseStore remoteStore
-}
-
-// yamlConfig specifies the optional settings taken from `.s3deploy.yml`
-type yamlConfig struct {
-	Bucket string `yaml:"bucket"`
-	Key    string `yaml:"key"`
-	Region string `yaml:"region"`
-	Secret string `yaml:"secret"`
-	Source string `yaml:"source"`
 }
 
 // FlagsToConfig reads command-line flags from os.Args[1:] into Config.
@@ -111,43 +102,25 @@ func (cfg *Config) check() error {
 // readSettings Reads the .s3deploy.yml file for configuration settings.
 func (cfg *Config) readSettings() error {
 	configFile := cfg.ConfigFile
-	settingsFile := yamlConfig{}
 
 	if configFile == "" {
 		return nil
 	}
 
+	// Configuration file is optional; when it does not exist,
+	// we rely on command flags and global AWS configuration
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		return nil
 	}
 
 	settings, err := ioutil.ReadFile(configFile)
-
-	// No problem if the file doesn't exist; then only rely on command flags
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	err = yaml.Unmarshal(settings, &settingsFile)
 	if err != nil {
-		return nil
+		return errors.New("could not find the settings file")
 	}
 
-	// Load in settings, but only when the accompanying command flag hasn't been set
-	if cfg.AccessKey == "" {
-		cfg.AccessKey = settingsFile.Key
-	}
-	if cfg.SecretKey == "" {
-		cfg.SecretKey = settingsFile.Secret
-	}
-	if cfg.SourcePath == "" {
-		cfg.SourcePath = settingsFile.Source
-	}
-	if cfg.BucketName == "" {
-		cfg.BucketName = settingsFile.Bucket
-	}
-	if cfg.RegionName == "" {
-		cfg.RegionName = settingsFile.Region
+	err = yaml.Unmarshal(settings, &cfg)
+	if err != nil {
+		return errors.New("could not read the settings file. Is the file in proper YAML format?")
 	}
 
 	return nil
