@@ -25,33 +25,35 @@ Note that `s3deploy` is a perfect tool to use with a continuous integration tool
 
 ```bash
 Usage of s3deploy:
-  -V    print version and exit
+  -V	print version and exit
   -bucket string
-        destination bucket name on AWS
+    	destination bucket name on AWS
   -config string
-        optional config file (default ".s3deploy.yml")
+    	optional config file (default ".s3deploy.yml")
+  -distribution-id string
+    	optional CDN distribution ID for cache invalidation
   -force
-        upload even if the etags match
-  -h    help
+    	upload even if the etags match
+  -h	help
   -key string
-        access key ID for AWS
+    	access key ID for AWS
   -max-delete int
-        maximum number of files to delete per deploy (default 256)
+    	maximum number of files to delete per deploy (default 256)
   -path string
-        optional bucket sub path
+    	optional bucket sub path
   -quiet
-        enable silent mode
+    	enable silent mode
   -region string
-        name of AWS region
+    	name of AWS region
   -secret string
-        secret access key for AWS
+    	secret access key for AWS
   -source string
-        path of files to upload (default ".")
+    	path of files to upload (default ".")
   -try
-        trial run, no remote updates
-  -v    enable verbose logging
+    	trial run, no remote updates
+  -v	enable verbose logging
   -workers int
-        number of workers to upload files (default -1)
+    	number of workers to upload files (default -1)
 ```
 
 ### Notes
@@ -128,6 +130,14 @@ routes:
 ```
 
 Replace <bucketname> with your own.
+	
+## CloudFront CDN Cache Invalidation
+
+If you have configured CloudFront CDN in front of your S3 bucket, you can supply the `distribution-id` as a flag. This will make sure to invalidate the cache for the updated files after the deployment to S3. Note that the AWS user must have the needed access rights.
+
+Note that CloudFront allows [1,000 paths per month at no charge](https://aws.amazon.com/blogs/aws/simplified-multiple-object-invalidation-for-amazon-cloudfront/), so S3deploy tries to be smart about the invalidation strategy; we try to reduce the number of paths to 8. If that isn't possible, we will fall back to a full invalidation, e.g. "/*".
+
+TODO(bep) IAM Policy example.
 
 ## Background Information
 

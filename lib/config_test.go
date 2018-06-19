@@ -26,6 +26,7 @@ func TestFlagsToConfig(t *testing.T) {
 		"-quiet=true",
 		"-region=myregion",
 		"-source=mysource",
+		"-distribution-id=mydistro",
 		"-try=true",
 	}
 
@@ -43,5 +44,6 @@ func TestFlagsToConfig(t *testing.T) {
 	assert.Equal("mysource", cfg.SourcePath)
 	assert.Equal(true, cfg.Try)
 	assert.Equal("myregion", cfg.RegionName)
+	assert.Equal("mydistro", cfg.CDNDistributionID)
 
 }

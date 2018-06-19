@@ -40,7 +40,7 @@ type Deployer struct {
 	// Verbose output.
 	outv io.Writer
 	// Regular output.
-	out io.Writer
+	printer
 
 	store remoteStore
 }
@@ -77,7 +77,7 @@ func Deploy(cfg *Config) (DeployStats, error) {
 	var d = &Deployer{
 		g:             g,
 		outv:          outv,
-		out:           out,
+		printer:       newPrinter(out),
 		filesToUpload: make(chan *osFile),
 		cfg:           cfg,
 		stats:         &DeployStats{}}
@@ -95,16 +95,16 @@ func Deploy(cfg *Config) (DeployStats, error) {
 
 	baseStore := d.cfg.baseStore
 	if baseStore == nil {
-		baseStore, err = newRemoteStore(*d.cfg)
+		baseStore, err = newRemoteStore(*d.cfg, d)
 		if err != nil {
 			return *d.stats, err
 		}
 	}
 	if d.cfg.Try {
 		baseStore = newNoUpdateStore(baseStore)
-		fmt.Fprintln(d.out, "This is a trial run, with no remote updates.")
+		d.Println("This is a trial run, with no remote updates.")
 	}
-	d.store = newStore(baseStore)
+	d.store = newStore(*d.cfg, baseStore)
 
 	for i := 0; i < numberOfWorkers; i++ {
 		g.Go(func() error {
@@ -133,11 +133,36 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		withDeleteStats(d.stats),
 		withMaxDelete(d.cfg.MaxDelete))
 
+	if err == nil {
+		err = d.store.Finalize()
+	}
+
 	return *d.stats, err
 }
 
-func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile, reason string) {
-	fmt.Fprintf(d.out, "%s (%s) %s ", f.relPath, reason, up)
+type printer interface {
+	Println(a ...interface{}) (n int, err error)
+	Printf(format string, a ...interface{}) (n int, err error)
+}
+
+type print struct {
+	out io.Writer
+}
+
+func newPrinter(out io.Writer) printer {
+	return print{out: out}
+}
+
+func (p print) Println(a ...interface{}) (n int, err error) {
+	return fmt.Fprintln(p.out, a...)
+}
+
+func (p print) Printf(format string, a ...interface{}) (n int, err error) {
+	return fmt.Fprintf(p.out, format, a...)
+}
+
+func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile) {
+	d.Printf("%s (%s) %s ", f.relPath, f.reason, up)
 	select {
 	case <-ctx.Done():
 	case d.filesToUpload <- f:
@@ -153,6 +178,15 @@ func (d *Deployer) enqueueDelete(key string) {
 	fmt.Fprintf(d.outv, "%s not found in source, deleting.\n", key)
 	d.filesToDelete = append(d.filesToDelete, key)
 }
+
+type uploadReason string
+
+const (
+	reasonNotFound uploadReason = "not found"
+	reasonForce    uploadReason = "force"
+	reasonSize     uploadReason = "size"
+	reasonETag     uploadReason = "ETag"
+)
 
 // plan figures out which files need to be uploaded.
 func (d *Deployer) plan(ctx context.Context) error {
@@ -170,7 +204,7 @@ func (d *Deployer) plan(ctx context.Context) error {
 	for f := range localFiles {
 		// default: upload because local file not found on remote.
 		up := true
-		reason := "not found"
+		reason := reasonNotFound
 
 		bucketPath := f.relPath
 		if d.cfg.BucketPath != "" {
@@ -180,7 +214,7 @@ func (d *Deployer) plan(ctx context.Context) error {
 		if remoteFile, ok := remoteFiles[bucketPath]; ok {
 			if d.cfg.Force {
 				up = true
-				reason = "force"
+				reason = reasonForce
 			} else {
 				up, reason = f.shouldThisReplace(remoteFile)
 			}
@@ -188,8 +222,10 @@ func (d *Deployer) plan(ctx context.Context) error {
 			delete(remoteFiles, bucketPath)
 		}
 
+		f.reason = reason
+
 		if up {
-			d.enqueueUpload(ctx, f, reason)
+			d.enqueueUpload(ctx, f)
 		} else {
 			d.skipFile(f)
 		}

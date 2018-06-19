@@ -27,6 +27,9 @@ type Config struct {
 	BucketPath string
 	RegionName string
 
+	// When set, will invalidate the CDN cache for the updated files.
+	CDNDistributionID string
+
 	// Optional configFile
 	ConfigFile string
 
@@ -62,6 +65,7 @@ func flagsToConfig(f *flag.FlagSet) (*Config, error) {
 	f.StringVar(&cfg.BucketName, "bucket", "", "destination bucket name on AWS")
 	f.StringVar(&cfg.BucketPath, "path", "", "optional bucket sub path")
 	f.StringVar(&cfg.SourcePath, "source", ".", "path of files to upload")
+	f.StringVar(&cfg.CDNDistributionID, "distribution-id", "", "optional CDN distribution ID for cache invalidation")
 	f.StringVar(&cfg.ConfigFile, "config", ".s3deploy.yml", "optional config file")
 	f.IntVar(&cfg.MaxDelete, "max-delete", 256, "maximum number of files to delete per deploy")
 	f.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")

@@ -289,3 +289,7 @@ func (s *testStore) DeleteObjects(ctx context.Context, keys []string, opts ...op
 	}
 	return nil
 }
+
+func (s *testStore) Finalize() error {
+	return nil
+}

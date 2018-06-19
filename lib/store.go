@@ -7,29 +7,54 @@ package lib
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"sync/atomic"
 )
 
 var (
 	_ remoteStore = (*store)(nil)
+	_ remoteCDN   = (*noUpdateStore)(nil)
 )
 
 type remoteStore interface {
 	FileMap(opts ...opOption) (map[string]file, error)
 	Put(ctx context.Context, f localFile, opts ...opOption) error
 	DeleteObjects(ctx context.Context, keys []string, opts ...opOption) error
+	Finalize() error
+}
+
+type remoteCDN interface {
+	InvalidateCDNCache(paths ...string) error
 }
 
 type store struct {
+	cfg      Config
 	delegate remoteStore
+
+	changedKeys []string
+	changedMu   sync.Mutex
 }
 
-func newStore(s remoteStore) remoteStore {
-	return &store{delegate: s}
+func newStore(cfg Config, s remoteStore) remoteStore {
+	return &store{cfg: cfg, delegate: s}
+}
+
+func (s *store) trackChanged(keys ...string) {
+	s.changedMu.Lock()
+	defer s.changedMu.Unlock()
+	s.changedKeys = append(s.changedKeys, keys...)
 }
 
 func (s *store) FileMap(opts ...opOption) (map[string]file, error) {
 	return s.delegate.FileMap(opts...)
+}
+
+func (s *store) Finalize() error {
+	if cdn, ok := s.delegate.(remoteCDN); ok {
+		return cdn.InvalidateCDNCache(s.changedKeys...)
+	}
+	return nil
 }
 
 func (s *store) Put(ctx context.Context, f localFile, opts ...opOption) error {
@@ -41,6 +66,7 @@ func (s *store) Put(ctx context.Context, f localFile, opts ...opOption) error {
 	err = s.delegate.Put(ctx, f, opts...)
 
 	if err == nil {
+		s.trackChanged(f.Key())
 		conf.statsCollector(1, 0)
 	}
 
@@ -79,6 +105,7 @@ func (s *store) DeleteObjects(ctx context.Context, keys []string, opts ...opOpti
 			return err
 		}
 
+		s.trackChanged(keyChunk...)
 		deleted += len(keyChunk)
 		conf.statsCollector(deleted, 0)
 		if deleted >= conf.maxDelete {
@@ -111,6 +138,19 @@ func (s *noUpdateStore) Put(ctx context.Context, f localFile, opts ...opOption) 
 
 func (s *noUpdateStore) DeleteObjects(ctx context.Context, keys []string, opts ...opOption) error {
 	return nil
+}
+
+func (s *noUpdateStore) Finalize() error {
+	if s.readOps != nil {
+		return s.readOps.Finalize()
+	}
+	return nil
+}
+
+func (s *noUpdateStore) InvalidateCDNCache(paths ...string) error {
+	fmt.Println("\nInvalidate CDN:", paths)
+	return nil
+
 }
 
 type opConfig struct {

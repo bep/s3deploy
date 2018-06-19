@@ -27,6 +27,7 @@ import (
 var (
 	_ file      = (*osFile)(nil)
 	_ localFile = (*osFile)(nil)
+	_ reasoner  = (*osFile)(nil)
 )
 
 type file interface {
@@ -36,9 +37,13 @@ type file interface {
 	Size() int64
 }
 
+type reasoner interface {
+	UploadReason() uploadReason
+}
+
 type localFile interface {
 	file
-	shouldThisReplace(other file) (bool, string)
+	shouldThisReplace(other file) (bool, uploadReason)
 
 	// Content returns the content to be stored remotely. If this file
 	// configured to be gzipped, then that is what you get.
@@ -53,6 +58,8 @@ type osFile struct {
 	// Filled when BucketPath is provided. Will store files in a sub-path
 	// of the target file store.
 	targetRoot string
+
+	reason uploadReason
 
 	absPath string
 	size    int64
@@ -72,6 +79,10 @@ func (f *osFile) Key() string {
 		return path.Join(f.targetRoot, f.relPath)
 	}
 	return f.relPath
+}
+
+func (f *osFile) UploadReason() uploadReason {
+	return f.reason
 }
 
 func (f *osFile) ETag() string {
@@ -152,13 +163,13 @@ func detectContentTypeFromContent(b []byte) string {
 
 }
 
-func (f *osFile) shouldThisReplace(other file) (bool, string) {
+func (f *osFile) shouldThisReplace(other file) (bool, uploadReason) {
 	if f.Size() != other.Size() {
-		return true, "size"
+		return true, reasonSize
 	}
 
 	if f.ETag() != other.ETag() {
-		return true, "ETag"
+		return true, reasonETag
 	}
 
 	return false, ""

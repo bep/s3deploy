@@ -51,7 +51,7 @@ func TestShouldThisReplace(t *testing.T) {
 		message := fmt.Sprintf("Test %d", i)
 		b, reason := of.shouldThisReplace(test.testFile)
 		assert.Equal(test.expect, b, message)
-		assert.Equal(test.expectReason, reason)
+		assert.Equal(uploadReason(test.expectReason), reason)
 	}
 }
 
