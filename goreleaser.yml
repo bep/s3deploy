@@ -21,7 +21,7 @@ brew:
   description: "Deploy static websites to Amazon S3 with Gzip and headers support."
   test: |
     system "#{bin}/s3deploy", "-h"
-fpm:
+nfpm:
   formats:
       - deb
   vendor: "bep"
@@ -29,6 +29,15 @@ fpm:
   maintainer: "<Bjørn Erik Pedersen bjorn.erik.pedersen@gmail.com>"
   description: "A powerful tool to deploy static websites to Amazon S3 with Gzip and custom headers support."
   license: "MIT"
+  name_template: "{{.Binary}}_{{.Version}}_{{.Os}}-{{.Arch}}"
+  replacements:
+    amd64: 64bit
+    386: 32bit
+    arm: ARM
+    arm64: ARM64
+    darwin: macOS
+    linux: Linux
+    windows: Windows
 archive:
   format: tar.gz
   format_overrides:
