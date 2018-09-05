@@ -8,7 +8,7 @@ jobs:
       - checkout
       - run:
             command: |
-                goreleaser
+                goreleaser --parallelism=1
 workflows:
   version: 2
   release:
