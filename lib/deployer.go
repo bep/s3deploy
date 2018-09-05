@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/text/unicode/norm"
 
 	"gopkg.in/yaml.v2"
 )
@@ -226,6 +227,12 @@ func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFi
 		if info.Name() == ".DS_Store" {
 			return nil
 		}
+
+		if runtime.GOOS == "darwin" {
+			// When a file system is HFS+, its filepath is in NFD form.
+			path = norm.NFC.String(path)
+		}
+
 		abs, err := filepath.Abs(path)
 		if err != nil {
 			return err
