@@ -8,7 +8,8 @@ jobs:
       - checkout
       - run:
             command: |
-                goreleaser --parallelism=1
+                go mod download
+                goreleaser
 workflows:
   version: 2
   release:
