@@ -47,6 +47,13 @@ func TestReduceInvalidationPaths(t *testing.T) {
 	normalized = normalizeInvalidationPaths("/hugoscss", 3, false, hugoChanges...)
 	//assert.Equal(1, len(normalized))
 	assert.Equal([]string{"/hugoscss/*"}, normalized)
+
+	// Force
+	normalized = normalizeInvalidationPaths("", 5, true, rootPlusManyInDifferentFoldersNested...)
+	assert.Equal([]string{"/*"}, normalized)
+	normalized = normalizeInvalidationPaths("root", 5, true, rootPlusManyInDifferentFoldersNested...)
+	assert.Equal([]string{"/root/*"}, normalized)
+
 }
 
 func TestPathsToInvalidationBatch(t *testing.T) {

@@ -122,7 +122,7 @@ func normalizeInvalidationPaths(
 		root = "/" + root
 	}
 
-	matchAll := path.Join(root, "*/")
+	matchAll := path.Join(root, "*")
 	clearAll := []string{matchAll}
 
 	if force {
