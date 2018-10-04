@@ -143,7 +143,40 @@ If you have configured CloudFront CDN in front of your S3 bucket, you can supply
 
 Note that CloudFront allows [1,000 paths per month at no charge](https://aws.amazon.com/blogs/aws/simplified-multiple-object-invalidation-for-amazon-cloudfront/), so S3deploy tries to be smart about the invalidation strategy; we try to reduce the number of paths to 8. If that isn't possible, we will fall back to a full invalidation, e.g. "/*".
 
-TODO(bep) IAM Policy example.
+### Example IAM Policy With CloudFront Config
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::<bucketname>"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:PutObjectAcl"
+            ],
+            "Resource": "arn:aws:s3:::<bucketname>/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudfront:GetDistribution",
+                "cloudfront:CreateInvalidation"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
 
 ## Background Information
 
