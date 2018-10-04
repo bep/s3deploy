@@ -7,7 +7,7 @@
 [![codecov](https://codecov.io/gh/bep/s3deploy/branch/master/graph/badge.svg)](https://codecov.io/gh/bep/s3deploy)
 [![Release](https://img.shields.io/github/release/bep/s3deploy.svg?style=flat-square)](https://github.com/bep/s3deploy/releases/latest)
 
-A simple tool to deploy static websites to Amazon S3 with Gzip and custom headers support (e.g. "Cache-Control"). It uses ETag hashes to check if a file has changed, which makes it optimal in combination with static site generators like [Hugo](https://github.com/gohugoio/hugo).
+A simple tool to deploy static websites to Amazon S3 and CloudFront with Gzip and custom headers support (e.g. "Cache-Control"). It uses ETag hashes to check if a file has changed, which makes it optimal in combination with static site generators like [Hugo](https://github.com/gohugoio/hugo).
 
 ## Install
 
@@ -19,6 +19,12 @@ Pre-built binaries can be found [here](https://github.com/bep/s3deploy/releases/
  go get -u -v github.com/bep/s3deploy
  ```
  
+ To install on MacOS using Homebrew:
+
+ ```bash
+ brew install bep/tap/s3deploy
+ ```
+
 Note that `s3deploy` is a perfect tool to use with a continuous integration tool such as [CircleCI](https://circleci.com/). See [this static site](https://github.com/bep/bego.io) for a simple example of automated depoloyment of a Hugo site to Amazon S3 via `s3deploy`.  The most relevant files are [circle.yml](https://github.com/bep/bego.io/blob/master/circle.yml) and [.s3deploy.yml](https://github.com/bep/bego.io/blob/master/.s3deploy.yml). For another example, see [this](https://mostlygeek.com/posts/hugo-circle-s3-hosting/) tutorial that uses s3deploy with CircleCI.
 
 ## Use
