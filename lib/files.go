@@ -19,9 +19,12 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/dsnet/golib/memfile"
+	"golang.org/x/text/unicode/norm"
 )
 
 var (
@@ -50,6 +53,58 @@ type localFile interface {
 	Content() io.ReadSeeker
 
 	Headers() map[string]string
+}
+
+type osStore struct{}
+
+func newOSStore() *osStore {
+	return &osStore{}
+}
+
+func (s *osStore) Walk(root string, walkFn WalkFunc) error {
+	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		err = walkFn(path, info, err)
+		if err == SkipDir {
+			return filepath.SkipDir
+		}
+		return err
+	})
+}
+
+func (s *osStore) IsHiddenDir(path string) bool {
+	return strings.HasPrefix(path, ".")
+}
+
+func (s *osStore) IsIgnorableFilename(path string) bool {
+	return path == ".DS_Store"
+}
+
+func (s *osStore) NormaliseName(path string) string {
+	if runtime.GOOS == "darwin" {
+		// When a file system is HFS+, its filepath is in NFD form.
+		return norm.NFC.String(path)
+	}
+	return path
+}
+
+func (s *osStore) Abs(path string) (string, error) {
+	return filepath.Abs(path)
+}
+
+func (s *osStore) Rel(basePath, path string) (string, error) {
+	return filepath.Rel(basePath, path)
+}
+
+func (s *osStore) Ext(path string) string {
+	return filepath.Ext(path)
+}
+
+func (s *osStore) ToSlash(path string) string {
+	return filepath.ToSlash(path)
+}
+
+func (s *osStore) Open(path string) (io.ReadCloser, error) {
+	return os.Open(path)
 }
 
 type osFile struct {
@@ -125,7 +180,7 @@ func (f *osFile) Headers() map[string]string {
 	return headers
 }
 
-func (f *osFile) initContentType(peek []byte) error {
+func (f *osFile) initContentType(local localStore, peek []byte) error {
 	if f.route != nil {
 		if contentType, found := f.route.Headers["Content-Type"]; found {
 			f.contentType = contentType
@@ -133,7 +188,7 @@ func (f *osFile) initContentType(peek []byte) error {
 		}
 	}
 
-	contentType := mime.TypeByExtension(filepath.Ext(f.relPath))
+	contentType := mime.TypeByExtension(local.Ext(f.relPath))
 	if contentType != "" {
 		f.contentType = contentType
 		return nil
@@ -175,18 +230,18 @@ func (f *osFile) shouldThisReplace(other file) (bool, uploadReason) {
 	return false, ""
 }
 
-func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInfo) (*osFile, error) {
-	relPath = filepath.ToSlash(relPath)
+func newOSFile(local localStore, routes routes, targetRoot string, f *tmpFile) (*osFile, error) {
+	relPath := local.ToSlash(f.relPath)
 
-	file, err := os.Open(absPath)
+	file, err := local.Open(f.absPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open %q: %s", absPath, err)
+		return nil, fmt.Errorf("failed to open %q: %s", f.absPath, err)
 	}
 	defer file.Close()
 
 	var (
 		mFile *memfile.File
-		size  = fi.Size()
+		size  = f.size
 		peek  []byte
 	)
 
@@ -209,13 +264,27 @@ func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInf
 		mFile = memfile.New(b)
 	}
 
-	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: absPath, relPath: relPath, size: size}
+	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: f.absPath, relPath: relPath, size: size}
 
-	if err := of.initContentType(peek); err != nil {
+	if err := of.initContentType(local, peek); err != nil {
 		return nil, err
 	}
 
 	return of, nil
+}
+
+type tmpFile struct {
+	relPath string
+	absPath string
+	size    int64
+}
+
+func newTmpFile(relPath, absPath string, size int64) *tmpFile {
+	return &tmpFile{
+		relPath: relPath,
+		absPath: absPath,
+		size:    size,
+	}
 }
 
 type routes []*route
@@ -233,9 +302,45 @@ func (r routes) get(path string) *route {
 
 }
 
+type orders []*regexp.Regexp
+
+func (o orders) get(path string) int16 {
+	for i := len(o) - 1; i >= 0; i-- {
+		if o[i].MatchString(path) {
+			return (int16)(i + 1)
+		}
+	}
+	return 0
+}
+
 // read config from .s3deploy.yml if found.
 type fileConfig struct {
-	Routes routes `yaml:"routes"`
+	Routes routes   `yaml:"routes"`
+	Order  []string `yaml:"order"`
+
+	orderRE orders // compiled version of Order
+}
+
+// CompileResources compiles orders and routes
+func (c *fileConfig) CompileResources() error {
+	var err error
+	for _, r := range c.Routes {
+		r.routerRE, err = regexp.Compile(r.Route)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	c.orderRE = make([]*regexp.Regexp, len(c.Order), len(c.Order))
+	for idx, o := range c.Order {
+		c.orderRE[idx], err = regexp.Compile(o)
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type route struct {

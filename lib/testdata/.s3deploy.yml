@@ -10,5 +10,3 @@ routes:
       gzip: true
     - route: "^.+\\.(html|xml|json)$"
       gzip: true
-      
-        

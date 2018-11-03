@@ -93,5 +93,7 @@ func openTestFile(name string) (*osFile, error) {
 		return nil, err
 	}
 
-	return newOSFile(nil, "", relPath, absPath, fi)
+	tmp := newTmpFile(relPath, absPath, fi.Size())
+	s := newOSStore()
+	return newOSFile(s, nil, "", tmp)
 }

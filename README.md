@@ -107,6 +107,26 @@ routes:
       gzip: true   
 ``` 
 
+## Deploy order configuration
+
+Deploy order is important sometimes. For instance, when you want to deploy a SPA (Single Page Application), `index.html` and all those files not versioned must be deployed at the end to avoid problems with missing resources.
+
+To specify a deploy order, add the `order` section to your `.s3deploy.yml` as follows:
+
+```yaml
+routes:
+    # your routes here
+    - ...
+order:
+    - "^notmatchingfile$"
+    - "^index\\.html$"
+```
+
+Order groups work following these points:
+* Rules are written as regular expressions to match files.
+* There is always an implicit order group (present at first position), which contains all files not matched by other order groups.
+* Order in array is the one followed on deploys. In previous example, imagine we have the following files: `test.css`, `test.txt`, `test.html`, `index.html`, and `test.js`. All files except `index.html` will be deployed to S3, and then (once all files are uploaded successfully) `index.html` is deployed.
+* Can be empty groups, it means, regular expressions that does not match any files. In this case, this group is ignored in deploys. In previous example, it corresponds to the first appearing rule (`"^notmatchingfile$"`).
 
 ## Example IAM Policy
 

@@ -12,15 +12,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/text/unicode/norm"
 
 	"gopkg.in/yaml.v2"
 )
@@ -34,7 +31,6 @@ type Deployer struct {
 
 	g *errgroup.Group
 
-	filesToUpload chan *osFile
 	filesToDelete []string
 
 	// Verbose output.
@@ -43,6 +39,7 @@ type Deployer struct {
 	printer
 
 	store remoteStore
+	local localStore
 }
 
 type upload struct {
@@ -69,18 +66,14 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		}()
 	}
 
-	var g *errgroup.Group
 	ctx, cancel := context.WithCancel(context.Background())
-	g, ctx = errgroup.WithContext(ctx)
 	defer cancel()
 
 	var d = &Deployer{
-		g:             g,
-		outv:          outv,
-		printer:       newPrinter(out),
-		filesToUpload: make(chan *osFile),
-		cfg:           cfg,
-		stats:         &DeployStats{}}
+		outv:    outv,
+		printer: newPrinter(out),
+		cfg:     cfg,
+		stats:   &DeployStats{}}
 
 	numberOfWorkers := cfg.NumberOfWorkers
 	if numberOfWorkers <= 0 {
@@ -105,26 +98,56 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		d.Println("This is a trial run, with no remote updates.")
 	}
 	d.store = newStore(*d.cfg, baseStore)
+	d.local = newOSStore()
 
-	for i := 0; i < numberOfWorkers; i++ {
-		g.Go(func() error {
-			return d.upload(ctx)
-		})
-	}
+	return d.deploy(ctx, numberOfWorkers)
+}
 
-	err = d.plan(ctx)
-	if err != nil {
-		cancel()
-	}
-
-	errg := g.Wait()
-
+func (d *Deployer) deploy(ctx context.Context, numberOfWorkers int) (DeployStats, error) {
+	localFilesGroupped, err := d.groupLocalFiles(ctx, d.local, d.cfg.SourcePath)
 	if err != nil {
 		return *d.stats, err
 	}
 
-	if errg != nil && errg != context.Canceled {
-		return *d.stats, errg
+	remoteFiles, err := d.store.FileMap()
+	if err != nil {
+		return *d.stats, err
+	}
+
+	for idxg, localFiles := range localFilesGroupped {
+		if len(localFiles) == 0 {
+			d.Println("Ignoring group %d because it's empty", idxg)
+		} else {
+			d.Println("Processing group %d", idxg)
+
+			filesToUpload := make(chan *osFile)
+
+			wg, ctx := errgroup.WithContext(ctx)
+
+			for i := 0; i < numberOfWorkers; i++ {
+				wg.Go(func() error {
+					return d.upload(ctx, filesToUpload)
+				})
+			}
+
+			if err := d.plan(ctx, localFiles, remoteFiles, filesToUpload); err != nil {
+				return *d.stats, err
+			}
+
+			if errwg := wg.Wait(); errwg != nil {
+				// We want to exit on error or canceled
+				return *d.stats, errwg
+			}
+		}
+	}
+
+	// any remote files not found locally should be removed:
+	for key := range remoteFiles {
+		if !strings.HasPrefix(key, d.cfg.BucketPath) {
+			// Not part of this site: Keep!
+			continue
+		}
+		d.enqueueDelete(key)
 	}
 
 	err = d.store.DeleteObjects(
@@ -161,14 +184,6 @@ func (p print) Printf(format string, a ...interface{}) (n int, err error) {
 	return fmt.Fprintf(p.out, format, a...)
 }
 
-func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile) {
-	d.Printf("%s (%s) %s ", f.relPath, f.reason, up)
-	select {
-	case <-ctx.Done():
-	case d.filesToUpload <- f:
-	}
-}
-
 func (d *Deployer) skipFile(f *osFile) {
 	fmt.Fprintf(d.outv, "%s skipping …\n", f.relPath)
 	atomic.AddUint64(&d.stats.Skipped, uint64(1))
@@ -188,20 +203,9 @@ const (
 	reasonETag     uploadReason = "ETag"
 )
 
-// plan figures out which files need to be uploaded.
-func (d *Deployer) plan(ctx context.Context) error {
-	remoteFiles, err := d.store.FileMap()
-	if err != nil {
-		return err
-	}
-
-	// All local files at sourcePath
-	localFiles := make(chan *osFile)
-	d.g.Go(func() error {
-		return d.walk(ctx, d.cfg.SourcePath, localFiles)
-	})
-
-	for f := range localFiles {
+// plan figures out which files present on current group need to be uploaded.
+func (d *Deployer) plan(ctx context.Context, localFiles []*tmpFile, remoteFiles map[string]file, filesToUpload chan<- *osFile) error {
+	for _, f := range localFiles {
 		// default: upload because local file not found on remote.
 		up := true
 		reason := reasonNotFound
@@ -211,95 +215,94 @@ func (d *Deployer) plan(ctx context.Context) error {
 			bucketPath = path.Join(d.cfg.BucketPath, bucketPath)
 		}
 
+		osf, err := newOSFile(d.local, d.cfg.conf.Routes, d.cfg.BucketPath, f)
+		if err != nil {
+			return err
+		}
+
 		if remoteFile, ok := remoteFiles[bucketPath]; ok {
 			if d.cfg.Force {
 				up = true
 				reason = reasonForce
 			} else {
-				up, reason = f.shouldThisReplace(remoteFile)
+				up, reason = osf.shouldThisReplace(remoteFile)
 			}
 			// remove from map, whatever is leftover should be deleted:
 			delete(remoteFiles, bucketPath)
 		}
 
-		f.reason = reason
+		osf.reason = reason
 
 		if up {
-			d.enqueueUpload(ctx, f)
+			d.Printf("%s (%s) %s ", osf.relPath, osf.reason, up)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case filesToUpload <- osf:
+			}
 		} else {
-			d.skipFile(f)
+			d.skipFile(osf)
 		}
 	}
-	close(d.filesToUpload)
 
-	// any remote files not found locally should be removed:
-	for key := range remoteFiles {
-		if !strings.HasPrefix(key, d.cfg.BucketPath) {
-			// Not part of this site: Keep!
-			continue
-		}
-		d.enqueueDelete(key)
-	}
+	close(filesToUpload)
 
 	return nil
 }
 
 // walk a local directory
-func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFile) error {
-	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+func (d *Deployer) groupLocalFiles(ctx context.Context, local localStore, basePath string) ([][]*tmpFile, error) {
+	filesToProcessByGroup := make([][]*tmpFile, len(d.cfg.conf.orderRE)+1)
+
+	err := local.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if info.IsDir() {
 			// skip hidden directories like .git
-			if path != basePath && strings.HasPrefix(info.Name(), ".") {
-				return filepath.SkipDir
+			if path != basePath && local.IsHiddenDir(info.Name()) {
+				return SkipDir
 			}
 
 			return nil
 		}
 
-		if info.Name() == ".DS_Store" {
+		if local.IsIgnorableFilename(info.Name()) {
 			return nil
 		}
 
-		if runtime.GOOS == "darwin" {
-			// When a file system is HFS+, its filepath is in NFD form.
-			path = norm.NFC.String(path)
+		path = local.NormaliseName(path)
+
+		abs, err := local.Abs(path)
+		if err != nil {
+			return err
+		}
+		rel, err := local.Rel(basePath, path)
+		if err != nil {
+			return err
 		}
 
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(basePath, path)
-		if err != nil {
-			return err
-		}
-		f, err := newOSFile(d.cfg.conf.Routes, d.cfg.BucketPath, rel, abs, info)
-		if err != nil {
-			return err
-		}
+		f := newTmpFile(rel, abs, info.Size())
+		group := d.cfg.conf.orderRE.get(f.relPath)
+		filesToProcessByGroup[group] = append(filesToProcessByGroup[group], f)
 
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case files <- f:
+		default:
 		}
 
 		return nil
 	})
 
-	close(files)
-
-	return err
+	return filesToProcessByGroup, err
 }
 
-func (d *Deployer) upload(ctx context.Context) error {
+func (d *Deployer) upload(ctx context.Context, filesToUpload <-chan *osFile) error {
 	for {
 		select {
-		case f, ok := <-d.filesToUpload:
+		case f, ok := <-filesToUpload:
 			if !ok {
 				return nil
 			}
@@ -332,17 +335,12 @@ func (d *Deployer) loadConfig() error {
 
 	conf := fileConfig{}
 
-	err = yaml.Unmarshal(data, &conf)
-	if err != nil {
+	if err := yaml.Unmarshal(data, &conf); err != nil {
 		return err
 	}
 
-	for _, r := range conf.Routes {
-		r.routerRE, err = regexp.Compile(r.Route)
-
-		if err != nil {
-			return err
-		}
+	if err := conf.CompileResources(); err != nil {
+		return err
 	}
 
 	d.cfg.conf = conf

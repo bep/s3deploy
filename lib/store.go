@@ -7,7 +7,10 @@ package lib
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"os"
 	"sync"
 	"sync/atomic"
 )
@@ -221,3 +224,24 @@ func chunkStrings(s []string, size int) [][]string {
 
 	return chunks
 }
+
+type localStore interface {
+	Walk(root string, walkFn WalkFunc) error
+	IsHiddenDir(path string) bool
+	IsIgnorableFilename(path string) bool
+	NormaliseName(path string) string
+	Abs(path string) (string, error)
+	Rel(basePath, path string) (string, error)
+	Ext(path string) string
+	ToSlash(path string) string
+	Open(path string) (io.ReadCloser, error)
+}
+
+// SkipDir is used as a return value from WalkFuncs to indicate that
+// the directory named in the call is to be skipped. It is not returned
+// as an error by any function.
+var SkipDir = errors.New("skip this directory")
+
+// WalkFunc is the type of the function called for each file or directory
+// visited by Walk.
+type WalkFunc func(path string, info os.FileInfo, err error) error
