@@ -34,6 +34,7 @@ func TestDeploy(t *testing.T) {
 		RegionName: "eu-west-1",
 		ConfigFile: configFile,
 		MaxDelete:  300,
+		PublicReadACL: true,
 		Silent:     true,
 		SourcePath: source,
 		baseStore:  store,
