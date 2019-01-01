@@ -22,6 +22,7 @@ func TestFlagsToConfig(t *testing.T) {
 		"-key=mykey",
 		"-secret=mysecret",
 		"-max-delete=42",
+		"-public-access=true",
 		"-path=mypath",
 		"-quiet=true",
 		"-region=myregion",
@@ -39,6 +40,7 @@ func TestFlagsToConfig(t *testing.T) {
 	assert.Equal("mykey", cfg.AccessKey)
 	assert.Equal("mysecret", cfg.SecretKey)
 	assert.Equal(42, cfg.MaxDelete)
+	assert.Equal(true, cfg.PublicReadACL)
 	assert.Equal("mypath", cfg.BucketPath)
 	assert.Equal(true, cfg.Silent)
 	assert.Equal("mysource", cfg.SourcePath)

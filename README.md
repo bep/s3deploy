@@ -18,7 +18,7 @@ Pre-built binaries can be found [here](https://github.com/bep/s3deploy/releases/
 ```bash
  go get -u -v github.com/bep/s3deploy
  ```
- 
+
  To install on MacOS using Homebrew:
 
  ```bash
@@ -45,6 +45,8 @@ Usage of s3deploy:
     	access key ID for AWS
   -max-delete int
     	maximum number of files to delete per deploy (default 256)
+  -public-access
+        set public ACL on uploaded objects, defaults to private if not set.
   -path string
     	optional bucket sub path
   -quiet
@@ -104,8 +106,8 @@ routes:
          Cache-Control: "max-age=630720000, no-transform, public"
       gzip: false
     - route: "^.+\\.(html|xml|json)$"
-      gzip: true   
-``` 
+      gzip: true
+```
 
 
 ## Example IAM Policy
@@ -136,7 +138,7 @@ routes:
 ```
 
 Replace <bucketname> with your own.
-	
+
 ## CloudFront CDN Cache Invalidation
 
 If you have configured CloudFront CDN in front of your S3 bucket, you can supply the `distribution-id` as a flag. This will make sure to invalidate the cache for the updated files after the deployment to S3. Note that the AWS user must have the needed access rights.

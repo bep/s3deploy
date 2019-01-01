@@ -35,7 +35,7 @@ type Config struct {
 
 	NumberOfWorkers int
 	MaxDelete       int
-
+	PublicReadACL bool
 	Verbose bool
 	Silent  bool
 	Force   bool
@@ -68,6 +68,7 @@ func flagsToConfig(f *flag.FlagSet) (*Config, error) {
 	f.StringVar(&cfg.CDNDistributionID, "distribution-id", "", "optional CDN distribution ID for cache invalidation")
 	f.StringVar(&cfg.ConfigFile, "config", ".s3deploy.yml", "optional config file")
 	f.IntVar(&cfg.MaxDelete, "max-delete", 256, "maximum number of files to delete per deploy")
+	f.BoolVar(&cfg.PublicReadACL, "public-access", false, "set public ACL on uploaded objects, defaults to private if not set.")
 	f.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")
 	f.BoolVar(&cfg.Try, "try", false, "trial run, no remote updates")
 	f.BoolVar(&cfg.Verbose, "v", false, "enable verbose logging")
