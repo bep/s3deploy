@@ -20,11 +20,12 @@ var (
 )
 
 type s3Store struct {
-	bucket string
-	r      routes
-	svc    *s3.S3
+	bucket        string
+	bucketPath    string
+	r             routes
+	svc           *s3.S3
 	publicReadACL bool
-	cfc *cloudFrontClient
+	cfc           *cloudFrontClient
 }
 
 type s3File struct {
@@ -59,7 +60,7 @@ func newRemoteStore(cfg Config, logger printer) (*s3Store, error) {
 		}
 	}
 
-	s = &s3Store{svc: s3.New(sess), cfc: cfc, publicReadACL: cfg.PublicReadACL, bucket: cfg.BucketName, r: cfg.conf.Routes}
+	s = &s3Store{svc: s3.New(sess), cfc: cfc, publicReadACL: cfg.PublicReadACL, bucket: cfg.BucketName, r: cfg.conf.Routes, bucketPath: cfg.BucketPath}
 
 	return s, nil
 
@@ -70,6 +71,7 @@ func (s *s3Store) FileMap(opts ...opOption) (map[string]file, error) {
 
 	err := s.svc.ListObjectsPages(&s3.ListObjectsInput{
 		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(s.bucketPath),
 	}, func(res *s3.ListObjectsOutput, last bool) (shouldContinue bool) {
 		for _, o := range res.Contents {
 			m[*o.Key] = &s3File{o: o}
