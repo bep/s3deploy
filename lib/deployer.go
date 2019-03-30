@@ -162,7 +162,7 @@ func (p print) Printf(format string, a ...interface{}) (n int, err error) {
 }
 
 func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile) {
-	d.Printf("%s (%s) %s ", f.relPath, f.reason, up)
+	d.Printf("%s (%s) %s\n", f.relPath, f.reason, up)
 	select {
 	case <-ctx.Done():
 	case d.filesToUpload <- f:
