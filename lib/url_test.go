@@ -28,7 +28,7 @@ func TestPathEscapeRFC1738(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		actual := PathEscapeRFC1738(tc.input)
+		actual := pathEscapeRFC1738(tc.input)
 		assert.Equal(actual, tc.expected)
 	}
 }

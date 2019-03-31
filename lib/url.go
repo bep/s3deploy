@@ -19,11 +19,11 @@ func shouldEscape(c byte) bool {
 	return true
 }
 
-// PathEscapeRFC1738 escapes the string so it can be safely placed
+// pathEscapeRFC1738 escapes the string so it can be safely placed
 // inside a URL path segment according to RFC1738.
 // Based on golang native implementation of `url.PathEscape`
 // https://golang.org/src/net/url/url.go?s=7976:8008#L276
-func PathEscapeRFC1738(s string) string {
+func pathEscapeRFC1738(s string) string {
 	spaceCount, hexCount := 0, 0
 	for i := 0; i < len(s); i++ {
 		c := s[i]
