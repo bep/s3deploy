@@ -102,7 +102,7 @@ func (*cloudFrontClient) pathsToInvalidationBatch(ref string, paths ...string) *
 	}
 	cfpaths := &cloudfront.Paths{}
 	for _, p := range paths {
-		cfpaths.Items = append(cfpaths.Items, aws.String(PathEscapeRFC1738(p)))
+		cfpaths.Items = append(cfpaths.Items, aws.String(pathEscapeRFC1738(p)))
 	}
 
 	qty := int64(len(paths))
