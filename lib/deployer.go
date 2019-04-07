@@ -234,10 +234,6 @@ func (d *Deployer) plan(ctx context.Context) error {
 
 	// any remote files not found locally should be removed:
 	for key := range remoteFiles {
-		if !strings.HasPrefix(key, d.cfg.BucketPath) {
-			// Not part of this site: Keep!
-			continue
-		}
 		d.enqueueDelete(key)
 	}
 
