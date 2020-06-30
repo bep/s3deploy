@@ -1,4 +1,6 @@
-module github.com/bep/s3deploy
+module github.com/bep/s3deploy/v2
+
+go 1.14
 
 require (
 	github.com/aws/aws-sdk-go v1.15.27
