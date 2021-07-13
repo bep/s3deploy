@@ -198,7 +198,7 @@ func (d *Deployer) plan(ctx context.Context) error {
 	// All local files at sourcePath
 	localFiles := make(chan *osFile)
 	d.g.Go(func() error {
-		return d.walk(ctx, d.cfg.SourcePath, localFiles)
+		return d.walk(ctx, d.cfg.SourcePath, d.cfg.conf.DotAllowlist, localFiles)
 	})
 
 	for f := range localFiles {
@@ -241,7 +241,11 @@ func (d *Deployer) plan(ctx context.Context) error {
 }
 
 // walk a local directory
-func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFile) error {
+func (d *Deployer) walk(ctx context.Context, basePath string, dotAllowlist []*string, files chan<- *osFile) error {
+	dotAllowSet := make(map[string]bool)
+	for _, v := range dotAllowlist {
+		dotAllowSet[*v] = true
+	}
 	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -249,7 +253,7 @@ func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFi
 
 		if info.IsDir() {
 			// skip hidden directories like .git
-			if path != basePath && strings.HasPrefix(info.Name(), ".") {
+			if path != basePath && strings.HasPrefix(info.Name(), ".") && !dotAllowSet[info.Name()] {
 				return filepath.SkipDir
 			}
 
