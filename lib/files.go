@@ -219,6 +219,7 @@ func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInf
 }
 
 type routes []*route
+type filen []*string
 
 func (r routes) get(path string) *route {
 
@@ -236,6 +237,7 @@ func (r routes) get(path string) *route {
 // read config from .s3deploy.yml if found.
 type fileConfig struct {
 	Routes routes `yaml:"routes"`
+	DotAllowlist filen `yaml:"dotallowlist"`
 }
 
 type route struct {
