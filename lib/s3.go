@@ -20,12 +20,12 @@ var (
 )
 
 type s3Store struct {
-	bucket        string
-	bucketPath    string
-	r             routes
-	svc           *s3.S3
-	publicReadACL bool
-	cfc           *cloudFrontClient
+	bucket     string
+	bucketPath string
+	r          routes
+	svc        *s3.S3
+	acl        string
+	cfc        *cloudFrontClient
 }
 
 type s3File struct {
@@ -60,7 +60,14 @@ func newRemoteStore(cfg Config, logger printer) (*s3Store, error) {
 		}
 	}
 
-	s = &s3Store{svc: s3.New(sess), cfc: cfc, publicReadACL: cfg.PublicReadACL, bucket: cfg.BucketName, r: cfg.conf.Routes, bucketPath: cfg.BucketPath}
+	acl := "private"
+	if cfg.ACL != "" {
+		acl = cfg.ACL
+	} else if cfg.PublicReadACL {
+		acl = "public-read"
+	}
+
+	s = &s3Store{svc: s3.New(sess), cfc: cfc, acl: acl, bucket: cfg.BucketName, r: cfg.conf.Routes, bucketPath: cfg.BucketPath}
 
 	return s, nil
 
@@ -95,17 +102,11 @@ func (s *s3Store) Put(ctx context.Context, f localFile, opts ...opOption) error 
 		}
 	}
 
-	acl := aws.String("private")
-
-	if s.publicReadACL {
-		acl = aws.String("public-read")
-	}
-
 	_, err := s.svc.PutObjectWithContext(ctx, &s3.PutObjectInput{
 		Bucket:        aws.String(s.bucket),
 		Key:           aws.String(f.Key()),
 		Body:          f.Content(),
-		ACL:           acl,
+		ACL:           aws.String(s.acl),
 		ContentLength: aws.Int64(f.Size()),
 	}, withHeaders)
 

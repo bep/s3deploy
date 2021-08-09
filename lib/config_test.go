@@ -22,7 +22,7 @@ func TestFlagsToConfig(t *testing.T) {
 		"-key=mykey",
 		"-secret=mysecret",
 		"-max-delete=42",
-		"-public-access=true",
+		"-acl=public-read",
 		"-path=mypath",
 		"-quiet=true",
 		"-region=myregion",
@@ -40,12 +40,29 @@ func TestFlagsToConfig(t *testing.T) {
 	assert.Equal("mykey", cfg.AccessKey)
 	assert.Equal("mysecret", cfg.SecretKey)
 	assert.Equal(42, cfg.MaxDelete)
-	assert.Equal(true, cfg.PublicReadACL)
+	assert.Equal("public-read", cfg.ACL)
 	assert.Equal("mypath", cfg.BucketPath)
 	assert.Equal(true, cfg.Silent)
 	assert.Equal("mysource", cfg.SourcePath)
 	assert.Equal(true, cfg.Try)
 	assert.Equal("myregion", cfg.RegionName)
 	assert.Equal("mydistro", cfg.CDNDistributionID)
+}
 
+func TestSetAclAndPublicAccessFlag(t *testing.T) {
+	assert := require.New(t)
+	flags := flag.NewFlagSet("test", flag.PanicOnError)
+	args := []string{
+		"-bucket=mybucket",
+		"-acl=public-read",
+		"-public-access=true",
+	}
+
+	cfg, err := flagsToConfig(flags)
+	assert.NoError(err)
+	assert.NoError(flags.Parse(args))
+
+	check_err := cfg.check()
+	assert.Error(check_err)
+	assert.Contains(check_err.Error(), "you passed a value for the flags public-access and acl")
 }

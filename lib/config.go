@@ -8,6 +8,7 @@ package lib
 import (
 	"errors"
 	"flag"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,11 +36,12 @@ type Config struct {
 
 	NumberOfWorkers int
 	MaxDelete       int
-	PublicReadACL bool
-	Verbose bool
-	Silent  bool
-	Force   bool
-	Try     bool
+	ACL             string
+	PublicReadACL   bool
+	Verbose         bool
+	Silent          bool
+	Force           bool
+	Try             bool
 
 	// CLI state
 	PrintVersion bool
@@ -68,7 +70,8 @@ func flagsToConfig(f *flag.FlagSet) (*Config, error) {
 	f.StringVar(&cfg.CDNDistributionID, "distribution-id", "", "optional CDN distribution ID for cache invalidation")
 	f.StringVar(&cfg.ConfigFile, "config", ".s3deploy.yml", "optional config file")
 	f.IntVar(&cfg.MaxDelete, "max-delete", 256, "maximum number of files to delete per deploy")
-	f.BoolVar(&cfg.PublicReadACL, "public-access", false, "set public ACL on uploaded objects, defaults to private if not set.")
+	f.BoolVar(&cfg.PublicReadACL, "public-access", false, "DEPRECATED: please set -acl='public-read'")
+	f.StringVar(&cfg.ACL, "acl", "", "provide an ACL for uploaded objects. to make objects public, set to 'public-read'. all possible values are listed here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl (default \"private\")")
 	f.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")
 	f.BoolVar(&cfg.Try, "try", false, "trial run, no remote updates")
 	f.BoolVar(&cfg.Verbose, "v", false, "enable verbose logging")
@@ -81,7 +84,6 @@ func flagsToConfig(f *flag.FlagSet) (*Config, error) {
 }
 
 func (cfg *Config) check() error {
-
 	if cfg.BucketName == "" {
 		return errors.New("AWS bucket is required")
 	}
@@ -93,6 +95,14 @@ func (cfg *Config) check() error {
 	// a root directory, such as "/" on Unix or `C:\` on Windows.
 	if strings.HasSuffix(cfg.SourcePath, string(os.PathSeparator)) {
 		return errors.New("invalid source path: Cannot deploy from root")
+	}
+
+	if cfg.PublicReadACL {
+		log.Print("WARNING: the 'public-access' flag is deprecated. Please use -acl='public-read' instead.")
+	}
+
+	if cfg.PublicReadACL && cfg.ACL != "" {
+		return errors.New("you passed a value for the flags public-access and acl, which is not supported. the public-access flag is deprecated. please use the acl flag moving forward")
 	}
 
 	return nil

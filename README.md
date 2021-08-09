@@ -29,8 +29,10 @@ Note that `s3deploy` is a perfect tool to use with a continuous integration tool
 ## Use
 
 ```bash
-Usage of s3deploy:
+Usage of ./s3deploy:
   -V	print version and exit
+  -acl string
+    	provide an ACL for uploaded objects. to make objects public, set to 'public-read'. all possible values are listed here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl (default "private")
   -bucket string
     	destination bucket name on AWS
   -config string
@@ -44,10 +46,10 @@ Usage of s3deploy:
     	access key ID for AWS
   -max-delete int
     	maximum number of files to delete per deploy (default 256)
-  -public-access
-        set public ACL on uploaded objects, defaults to private if not set.
   -path string
     	optional bucket sub path
+  -public-access
+    	DEPRECATED: please set -acl='public-read'
   -quiet
     	enable silent mode
   -region string
