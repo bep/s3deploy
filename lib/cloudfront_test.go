@@ -43,10 +43,16 @@ func TestReduceInvalidationPaths(t *testing.T) {
 	assert.Equal(4, len(normalized))
 	assert.Equal([]string{"/", "/about/*", "/blog/*", "/styles.css"}, normalized)
 
-	hugoChanges := []string{"/hugoscss/categories/index.html", "/hugoscss/index.html", "/hugoscss/tags/index.html", "/hugoscss/post/index.html", "/hugoscss/post/hello-scss/index.html", "/hugoscss/styles/main.min.36816b22057425f8a5f66b73918446b0cd793c0c6125406c285948f507599d1e.css"}
-	normalized = normalizeInvalidationPaths("/hugoscss", 3, false, hugoChanges...)
-	//assert.Equal(1, len(normalized))
+	changes := []string{"/hugoscss/categories/index.html", "/hugoscss/index.html", "/hugoscss/tags/index.html", "/hugoscss/post/index.html", "/hugoscss/post/hello-scss/index.html", "/hugoscss/styles/main.min.36816b22057425f8a5f66b73918446b0cd793c0c6125406c285948f507599d1e.css"}
+	normalized = normalizeInvalidationPaths("/hugoscss", 3, false, changes...)
 	assert.Equal([]string{"/hugoscss/*"}, normalized)
+
+	changes = []string{"/a/b1/a.css", "/a/b2/b.css"}
+	normalized = normalizeInvalidationPaths("/", 3, false, changes...)
+	assert.Equal([]string{"/a/b1/a.css", "/a/b2/b.css"}, normalized)
+
+	normalized = normalizeInvalidationPaths("/", 1, false, changes...)
+	assert.Equal([]string{"/a/*"}, normalized)
 
 	// Force
 	normalized = normalizeInvalidationPaths("", 5, true, rootPlusManyInDifferentFoldersNested...)

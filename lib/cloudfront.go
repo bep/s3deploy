@@ -153,17 +153,19 @@ func normalizeInvalidationPaths(
 		}
 	}
 
-	normalized = uniqueStrings(uniqueStrings(normalized))
+	normalized = uniqueStrings(normalized)
 	sort.Strings(normalized)
 
 	if len(normalized) > threshold {
-		normalized = uniqueStrings(normalized)
 		if len(normalized) > threshold {
 			for k := maxlevels; k > 0; k-- {
 				for i, p := range normalized {
 					if strings.Count(p, "/") > k {
 						parts := strings.Split(strings.TrimPrefix(path.Dir(p), "/"), "/")
-						normalized[i] = "/" + path.Join(parts[0:len(parts)-k+1]...) + "/*"
+						if len(parts) > 1 {
+							parts = parts[:len(parts)-1]
+						}
+						normalized[i] = "/" + path.Join(parts...) + "/*"
 					}
 				}
 				normalized = uniqueStrings(normalized)
