@@ -15,7 +15,7 @@ Pre-built binaries can be found [here](https://github.com/bep/s3deploy/releases/
 **s3deploy** is a [Go application](https://golang.org/doc/install), so you can also get and build it yourself via `go get`:
 
 ```bash
- go get -u -v github.com/bep/s3deploy
+ go get -u -v github.com/bep/s3deploy/v2
  ```
 
  To install on MacOS using Homebrew:
