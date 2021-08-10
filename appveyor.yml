@@ -1,8 +1,0 @@
-version: 1.0.{build}
-environment:
-  CGO_ENABLED: "0"
-clone_folder: C:\src
-build_script:
-- cmd: go env
-test_script:
-- cmd: go test -v -cover ./...
