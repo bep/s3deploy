@@ -220,7 +220,7 @@ func testSourcePath() string {
 
 func newTestStore(failAt int, root string) (remoteStore, map[string]file) {
 	m := map[string]file{
-		path.Join(root, "ab.txt"):       &testFile{key: path.Join(root, "ab.txt"), etag: `"7b0ded95031647702b8bed17dce7698a"`, size: int64(3)},
+		path.Join(root, "ab.txt"):       &testFile{key: path.Join(root, "ab.txt"), etag: `"b86fc6b051f63d73de262d4c34e3a0a9"`, size: int64(2)},
 		path.Join(root, "main.css"):     &testFile{key: path.Join(root, "main.css"), etag: `"changed"`, size: int64(27)},
 		path.Join(root, "deleteme.txt"): &testFile{},
 	}
