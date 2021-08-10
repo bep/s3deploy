@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: bepsays/ci-goreleaser:1.14.3
+      - image: bepsays/ci-goreleaser:1.16.7
     working_directory: /src
     steps:
       - checkout
