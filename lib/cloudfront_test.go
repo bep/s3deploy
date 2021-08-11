@@ -18,18 +18,20 @@ import (
 func TestReduceInvalidationPaths(t *testing.T) {
 	assert := require.New(t)
 
-	assert.Equal([]string{"/root/"}, normalizeInvalidationPaths("root", 5, false, "/root/index.html"))
-	assert.Equal([]string{"/"}, normalizeInvalidationPaths("", 5, false, "/index.html"))
-	assert.Equal([]string{"/*"}, normalizeInvalidationPaths("", 5, true, "/a", "/b"))
-	assert.Equal([]string{"/root/*"}, normalizeInvalidationPaths("root", 5, true, "/a", "/b"))
+	var client *cloudFrontClient
+
+	assert.Equal([]string{"/root/"}, client.normalizeInvalidationPaths("root", 5, false, "/root/index.html"))
+	assert.Equal([]string{"/"}, client.normalizeInvalidationPaths("", 5, false, "/index.html"))
+	assert.Equal([]string{"/*"}, client.normalizeInvalidationPaths("", 5, true, "/a", "/b"))
+	assert.Equal([]string{"/root/*"}, client.normalizeInvalidationPaths("root", 5, true, "/a", "/b"))
 
 	rootPlusMany := append([]string{"/index.html", "/styles.css"}, createFiles("css", false, 20)...)
-	normalized := normalizeInvalidationPaths("", 5, false, rootPlusMany...)
+	normalized := client.normalizeInvalidationPaths("", 5, false, rootPlusMany...)
 	assert.Equal(3, len(normalized))
 	assert.Equal([]string{"/", "/css/*", "/styles.css"}, normalized)
 
 	rootPlusManyInDifferentFolders := append([]string{"/index.html", "/styles.css"}, createFiles("css", true, 20)...)
-	assert.Equal([]string{"/*"}, normalizeInvalidationPaths("", 5, false, rootPlusManyInDifferentFolders...))
+	assert.Equal([]string{"/*"}, client.normalizeInvalidationPaths("", 5, false, rootPlusManyInDifferentFolders...))
 
 	rootPlusManyInDifferentFoldersNested := append([]string{"/index.html", "/styles.css"}, createFiles("blog", false, 10)...)
 	rootPlusManyInDifferentFoldersNested = append(rootPlusManyInDifferentFoldersNested, createFiles("blog/l1", false, 10)...)
@@ -39,26 +41,45 @@ func TestReduceInvalidationPaths(t *testing.T) {
 	rootPlusManyInDifferentFoldersNested = append(rootPlusManyInDifferentFoldersNested, createFiles("about/l1/l2/l3", false, 10)...)
 
 	// avoid situations where many changes in some HTML template triggers update in /images and similar
-	normalized = normalizeInvalidationPaths("", 5, false, rootPlusManyInDifferentFoldersNested...)
+	normalized = client.normalizeInvalidationPaths("", 5, false, rootPlusManyInDifferentFoldersNested...)
 	assert.Equal(4, len(normalized))
 	assert.Equal([]string{"/", "/about/*", "/blog/*", "/styles.css"}, normalized)
 
 	changes := []string{"/hugoscss/categories/index.html", "/hugoscss/index.html", "/hugoscss/tags/index.html", "/hugoscss/post/index.html", "/hugoscss/post/hello-scss/index.html", "/hugoscss/styles/main.min.36816b22057425f8a5f66b73918446b0cd793c0c6125406c285948f507599d1e.css"}
-	normalized = normalizeInvalidationPaths("/hugoscss", 3, false, changes...)
+	normalized = client.normalizeInvalidationPaths("/hugoscss", 3, false, changes...)
 	assert.Equal([]string{"/hugoscss/*"}, normalized)
 
 	changes = []string{"/a/b1/a.css", "/a/b2/b.css"}
-	normalized = normalizeInvalidationPaths("/", 3, false, changes...)
+	normalized = client.normalizeInvalidationPaths("/", 3, false, changes...)
 	assert.Equal([]string{"/a/b1/a.css", "/a/b2/b.css"}, normalized)
 
-	normalized = normalizeInvalidationPaths("/", 1, false, changes...)
+	normalized = client.normalizeInvalidationPaths("/", 1, false, changes...)
 	assert.Equal([]string{"/a/*"}, normalized)
 
 	// Force
-	normalized = normalizeInvalidationPaths("", 5, true, rootPlusManyInDifferentFoldersNested...)
+	normalized = client.normalizeInvalidationPaths("", 5, true, rootPlusManyInDifferentFoldersNested...)
 	assert.Equal([]string{"/*"}, normalized)
-	normalized = normalizeInvalidationPaths("root", 5, true, rootPlusManyInDifferentFoldersNested...)
+	normalized = client.normalizeInvalidationPaths("root", 5, true, rootPlusManyInDifferentFoldersNested...)
 	assert.Equal([]string{"/root/*"}, normalized)
+
+}
+
+func TestDetermineRootAndSubPath(t *testing.T) {
+	assert := require.New(t)
+
+	var client *cloudFrontClient
+
+	check := func(bucketPath, originPath, expectWebContextRoot, expectSubPath string) {
+		t.Helper()
+		s1, s2 := client.determineRootAndSubPath(bucketPath, originPath)
+		assert.Equal(expectWebContextRoot, s1)
+		assert.Equal(expectSubPath, s2)
+	}
+
+	check("temp/forsale", "temp", "/forsale", "temp")
+	check("/temp/forsale/", "temp", "/forsale", "temp")
+	check("root", "root", "/", "root")
+	check("root", "/root", "/", "root")
 
 }
 

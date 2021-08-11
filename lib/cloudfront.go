@@ -63,12 +63,12 @@ func (c *cloudFrontClient) InvalidateCDNCache(paths ...string) error {
 	originPath := *dcfg.Distribution.DistributionConfig.Origins.Items[0].OriginPath
 	var root string
 	if originPath != "" || c.bucketPath != "" {
-		bucket := strings.TrimPrefix(c.bucketPath, "/")
-		origin := strings.TrimPrefix(originPath, "/")
-		root = strings.TrimPrefix(bucket, origin)
-		subPath := strings.TrimPrefix(origin, bucket)
-		for i, p := range paths {
-			paths[i] = strings.TrimPrefix(p, subPath)
+		var subPath string
+		root, subPath = c.determineRootAndSubPath(c.bucketPath, originPath)
+		if subPath != "" {
+			for i, p := range paths {
+				paths[i] = strings.TrimPrefix(p, subPath)
+			}
 		}
 	}
 
@@ -76,7 +76,7 @@ func (c *cloudFrontClient) InvalidateCDNCache(paths ...string) error {
 	// If that isn't possible it will fall back to a full invalidation, e.g. "/*".
 	// CloudFront allows 1000 free invalidations per month. After that they
 	// cost money, so we want to keep this down.
-	paths = normalizeInvalidationPaths(root, 8, c.force, paths...)
+	paths = c.normalizeInvalidationPaths(root, 8, c.force, paths...)
 
 	if len(paths) > 10 {
 		c.logger.Printf("Create CloudFront invalidation request for %d paths", len(paths))
@@ -111,8 +111,36 @@ func (*cloudFrontClient) pathsToInvalidationBatch(ref string, paths ...string) *
 	return batch
 }
 
+// determineRootAndSubPath takes the bucketPath, as set as a flag,
+// and the originPath, as set in the CDN config, and
+// determines the web context root and the sub path below this context.
+func (c *cloudFrontClient) determineRootAndSubPath(bucketPath, originPath string) (webContextRoot string, subPath string) {
+	if bucketPath == "" && originPath == "" {
+		panic("one of bucketPath or originPath must be set")
+	}
+	bucketPath = strings.Trim(bucketPath, "/")
+	originPath = strings.Trim(originPath, "/")
+
+	webContextRoot = strings.TrimPrefix(bucketPath, originPath)
+	if webContextRoot == "" {
+		webContextRoot = "/"
+	}
+
+	if originPath != bucketPath {
+		// If the bucket path is a prefix of the origin, these resources
+		// are served from a sub path, e.g. https://example.com/foo.
+		subPath = strings.TrimPrefix(originPath, bucketPath)
+	} else {
+		// Served from the root.
+		subPath = bucketPath
+	}
+
+	return
+
+}
+
 // For path rules, see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Invalidation.html
-func normalizeInvalidationPaths(
+func (c *cloudFrontClient) normalizeInvalidationPaths(
 	root string,
 	threshold int,
 	force bool,
