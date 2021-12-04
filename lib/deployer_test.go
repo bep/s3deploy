@@ -103,6 +103,45 @@ func TestDeployForce(t *testing.T) {
 	assert.Equal("Deleted 1 of 1, uploaded 4, skipped 0 (100% changed)", stats.Summary())
 }
 
+func TestDeployWitIgnorePattern(t *testing.T) {
+	assert := require.New(t)
+	root := "my/path"
+	re := `^(main\.css|deleteme\.txt)$`
+
+	store, m := newTestStore(0, root)
+	source := testSourcePath()
+	configFile := filepath.Join(source, ".s3deploy.yml")
+
+	cfg := &Config{
+		BucketName: "example.com",
+		RegionName: "eu-west-1",
+		ConfigFile: configFile,
+		BucketPath: root,
+		MaxDelete:  300,
+		Silent:     false,
+		SourcePath: source,
+		baseStore:  store,
+		Ignore:     re,
+	}
+
+	prevCss := m["my/path/main.css"]
+	prevTag := prevCss.ETag()
+
+	stats, err := Deploy(cfg)
+	assert.NoError(err)
+	assert.Equal("Deleted 0 of 0, uploaded 2, skipped 1 (67% changed)", stats.Summary())
+	assertKeys(t, m,
+		"my/path/.s3deploy.yml",
+		"my/path/index.html",
+		"my/path/ab.txt",
+		"my/path/deleteme.txt", // ignored: stale
+		"my/path/main.css",     // ignored: not updated
+	)
+	mainCss := m["my/path/main.css"]
+	assert.Equal(mainCss.ETag(), prevTag)
+
+}
+
 func TestDeploySourceNotFound(t *testing.T) {
 	assert := require.New(t)
 	store, _ := newTestStore(0, "")

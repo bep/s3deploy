@@ -42,6 +42,8 @@ Usage of ./s3deploy:
   -force
     	upload even if the etags match
   -h	help
+  -ignore string
+    	regexp pattern for ignoring files
   -key string
     	access key ID for AWS
   -max-delete int

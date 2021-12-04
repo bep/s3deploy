@@ -28,6 +28,7 @@ func TestFlagsToConfig(t *testing.T) {
 		"-region=myregion",
 		"-source=mysource",
 		"-distribution-id=mydistro",
+		"-ignore=^ignored-prefix.*",
 		"-try=true",
 	}
 
@@ -47,6 +48,7 @@ func TestFlagsToConfig(t *testing.T) {
 	assert.Equal(true, cfg.Try)
 	assert.Equal("myregion", cfg.RegionName)
 	assert.Equal("mydistro", cfg.CDNDistributionID)
+	assert.Equal("^ignored-prefix.*", cfg.Ignore)
 }
 
 func TestSetAclAndPublicAccessFlag(t *testing.T) {
@@ -65,4 +67,62 @@ func TestSetAclAndPublicAccessFlag(t *testing.T) {
 	check_err := cfg.check()
 	assert.Error(check_err)
 	assert.Contains(check_err.Error(), "you passed a value for the flags public-access and acl")
+}
+
+func TestIgnoreFlagError(t *testing.T) {
+	assert := require.New(t)
+	flags := flag.NewFlagSet("test", flag.PanicOnError)
+	args := []string{
+		"-bucket=mybucket",
+		"-ignore=((INVALID_PATTERN",
+	}
+
+	cfg, err := flagsToConfig(flags)
+	assert.NoError(err)
+	assert.NoError(flags.Parse(args))
+
+	check_err := cfg.check()
+	assert.Error(check_err)
+	assert.Contains(check_err.Error(), "cannot compile 'ignore' flag pattern")
+}
+
+func TestShouldIgnore(t *testing.T) {
+	assert := require.New(t)
+
+	flags_default := flag.NewFlagSet("test", flag.PanicOnError)
+	flags_ignore := flag.NewFlagSet("test", flag.PanicOnError)
+
+	args_default := []string{
+		"-bucket=mybucket",
+		"-path=my/path",
+	}
+	args_ignore := []string{
+		"-bucket=mybucket",
+		"-path=my/path",
+		"-ignore=^ignored-prefix.*",
+	}
+
+	cfg_default, _ := flagsToConfig(flags_default)
+	cfg_ignore, _ := flagsToConfig(flags_ignore)
+
+	flags_default.Parse(args_default)
+	flags_ignore.Parse(args_ignore)
+
+	check_err_default := cfg_default.check()
+	check_err_ignore := cfg_ignore.check()
+
+	assert.NoError(check_err_default)
+	assert.NoError(check_err_ignore)
+
+	assert.False(cfg_default.shouldIgnoreLocal("any"))
+	assert.False(cfg_default.shouldIgnoreLocal("ignored-prefix/file.txt"))
+
+	assert.False(cfg_ignore.shouldIgnoreLocal("any"))
+	assert.True(cfg_ignore.shouldIgnoreLocal("ignored-prefix/file.txt"))
+
+	assert.False(cfg_default.shouldIgnoreRemote("my/path/any"))
+	assert.False(cfg_default.shouldIgnoreRemote("my/path/ignored-prefix/file.txt"))
+
+	assert.False(cfg_ignore.shouldIgnoreRemote("my/path/any"))
+	assert.True(cfg_ignore.shouldIgnoreRemote("my/path/ignored-prefix/file.txt"))
 }

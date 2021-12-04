@@ -233,7 +233,12 @@ func (d *Deployer) plan(ctx context.Context) error {
 	close(d.filesToUpload)
 
 	// any remote files not found locally should be removed:
+	// except for ignored files
 	for key := range remoteFiles {
+		if d.cfg.shouldIgnoreRemote(key) {
+			fmt.Fprintf(d.outv, "%s ignored …\n", key)
+			continue
+		}
 		d.enqueueDelete(key)
 	}
 
@@ -273,6 +278,11 @@ func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFi
 		if err != nil {
 			return err
 		}
+
+		if d.cfg.shouldIgnoreLocal(rel) {
+			return nil
+		}
+
 		f, err := newOSFile(d.cfg.conf.Routes, d.cfg.BucketPath, rel, abs, info)
 		if err != nil {
 			return err
