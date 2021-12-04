@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -42,6 +43,8 @@ type Config struct {
 	Silent          bool
 	Force           bool
 	Try             bool
+	Ignore          string
+	IgnoreRE        *regexp.Regexp // compiled version of Ignore
 
 	// CLI state
 	PrintVersion bool
@@ -73,6 +76,7 @@ func flagsToConfig(f *flag.FlagSet) (*Config, error) {
 	f.BoolVar(&cfg.PublicReadACL, "public-access", false, "DEPRECATED: please set -acl='public-read'")
 	f.StringVar(&cfg.ACL, "acl", "", "provide an ACL for uploaded objects. to make objects public, set to 'public-read'. all possible values are listed here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl (default \"private\")")
 	f.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")
+	f.StringVar(&cfg.Ignore, "ignore", "", "regexp pattern for ignoring files")
 	f.BoolVar(&cfg.Try, "try", false, "trial run, no remote updates")
 	f.BoolVar(&cfg.Verbose, "v", false, "enable verbose logging")
 	f.BoolVar(&cfg.Silent, "quiet", false, "enable silent mode")
@@ -105,5 +109,32 @@ func (cfg *Config) check() error {
 		return errors.New("you passed a value for the flags public-access and acl, which is not supported. the public-access flag is deprecated. please use the acl flag moving forward")
 	}
 
+	if cfg.Ignore != "" {
+		re, err := regexp.Compile(cfg.Ignore)
+		if err != nil {
+			return errors.New("cannot compile 'ignore' flag pattern " + err.Error())
+		}
+		cfg.IgnoreRE = re
+	}
+
 	return nil
+}
+
+func (cfg *Config) shouldIgnoreLocal(key string) bool {
+	if cfg.Ignore == "" {
+		return false
+	}
+
+	return cfg.IgnoreRE.MatchString(key)
+}
+
+func (cfg *Config) shouldIgnoreRemote(key string) bool {
+	if cfg.Ignore == "" {
+		return false
+	}
+
+	sub := key[len(cfg.BucketPath):]
+	sub = strings.TrimPrefix(sub, "/")
+
+	return cfg.IgnoreRE.MatchString(sub)
 }
