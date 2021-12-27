@@ -193,3 +193,7 @@ Because static-site generators can recreate **every** file (even if identical) t
 
 * [go3up](https://github.com/alexaandru/go3up) by Alexandru Ungur
 * [s3up](https://github.com/nathany/s3up) by Nathan Youngman (the starting-point of this project)
+ 
+## Stargazers over time
+
+ [![Stargazers over time](https://starchart.cc/bep/s3deploy.svg)](https://starchart.cc/bep/s3deploy)
