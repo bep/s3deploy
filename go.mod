@@ -3,7 +3,7 @@ module github.com/bep/s3deploy/v2
 go 1.14
 
 require (
-	github.com/aws/aws-sdk-go v1.41.11
+	github.com/aws/aws-sdk-go v1.42.32
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dsnet/golib v0.0.0-20171103203638-1ea166775780
 	github.com/stretchr/testify v1.7.0
