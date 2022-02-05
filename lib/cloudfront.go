@@ -21,8 +21,8 @@ import (
 var _ remoteCDN = (*cloudFrontClient)(nil)
 
 type cloudFrontClient struct {
-	// The CloudFront distribution ID
-	distributionID string
+	// The CloudFront distribution IDs
+	distributionIDs Strings
 
 	// Will invalidate the entire cache, e.g. "/*"
 	force      bool
@@ -36,15 +36,15 @@ func newCloudFrontClient(
 	sess *session.Session,
 	logger printer,
 	cfg Config) (*cloudFrontClient, error) {
-	if cfg.CDNDistributionID == "" {
-		return nil, errors.New("must provide a distribution ID")
+	if len(cfg.CDNDistributionIDs) == 0 {
+		return nil, errors.New("must provide one or more distribution ID")
 	}
 	return &cloudFrontClient{
-		distributionID: cfg.CDNDistributionID,
-		force:          cfg.Force,
-		bucketPath:     cfg.BucketPath,
-		logger:         logger,
-		cf:             cloudfront.New(sess),
+		distributionIDs: cfg.CDNDistributionIDs,
+		force:           cfg.Force,
+		bucketPath:      cfg.BucketPath,
+		logger:          logger,
+		cf:              cloudfront.New(sess),
 	}, nil
 }
 
@@ -53,47 +53,57 @@ func (c *cloudFrontClient) InvalidateCDNCache(paths ...string) error {
 		return nil
 	}
 
-	dcfg, err := c.cf.GetDistribution(&cloudfront.GetDistributionInput{
-		Id: &c.distributionID,
-	})
-	if err != nil {
+	invalidateForID := func(id string) error {
+		dcfg, err := c.cf.GetDistribution(&cloudfront.GetDistributionInput{
+			Id: &id,
+		})
+		if err != nil {
+			return err
+		}
+
+		originPath := *dcfg.Distribution.DistributionConfig.Origins.Items[0].OriginPath
+		var root string
+		if originPath != "" || c.bucketPath != "" {
+			var subPath string
+			root, subPath = c.determineRootAndSubPath(c.bucketPath, originPath)
+			if subPath != "" {
+				for i, p := range paths {
+					paths[i] = strings.TrimPrefix(p, subPath)
+				}
+			}
+		}
+
+		// This will try to reduce the number of invaldation paths to maximum 8.
+		// If that isn't possible it will fall back to a full invalidation, e.g. "/*".
+		// CloudFront allows 1000 free invalidations per month. After that they
+		// cost money, so we want to keep this down.
+		paths = c.normalizeInvalidationPaths(root, 8, c.force, paths...)
+
+		if len(paths) > 10 {
+			c.logger.Printf("Create CloudFront invalidation request for %d paths", len(paths))
+		} else {
+			c.logger.Printf("Create CloudFront invalidation request for %v", paths)
+		}
+
+		in := &cloudfront.CreateInvalidationInput{
+			DistributionId:    &id,
+			InvalidationBatch: c.pathsToInvalidationBatch(time.Now().Format("20060102150405"), paths...),
+		}
+
+		_, err = c.cf.CreateInvalidation(
+			in,
+		)
+
 		return err
 	}
 
-	originPath := *dcfg.Distribution.DistributionConfig.Origins.Items[0].OriginPath
-	var root string
-	if originPath != "" || c.bucketPath != "" {
-		var subPath string
-		root, subPath = c.determineRootAndSubPath(c.bucketPath, originPath)
-		if subPath != "" {
-			for i, p := range paths {
-				paths[i] = strings.TrimPrefix(p, subPath)
-			}
+	for _, id := range c.distributionIDs {
+		if err := invalidateForID(id); err != nil {
+			return err
 		}
 	}
 
-	// This will try to reduce the number of invaldation paths to maximum 8.
-	// If that isn't possible it will fall back to a full invalidation, e.g. "/*".
-	// CloudFront allows 1000 free invalidations per month. After that they
-	// cost money, so we want to keep this down.
-	paths = c.normalizeInvalidationPaths(root, 8, c.force, paths...)
-
-	if len(paths) > 10 {
-		c.logger.Printf("Create CloudFront invalidation request for %d paths", len(paths))
-	} else {
-		c.logger.Printf("Create CloudFront invalidation request for %v", paths)
-	}
-
-	in := &cloudfront.CreateInvalidationInput{
-		DistributionId:    &c.distributionID,
-		InvalidationBatch: c.pathsToInvalidationBatch(time.Now().Format("20060102150405"), paths...),
-	}
-
-	_, err = c.cf.CreateInvalidation(
-		in,
-	)
-
-	return err
+	return nil
 }
 
 func (*cloudFrontClient) pathsToInvalidationBatch(ref string, paths ...string) *cloudfront.InvalidationBatch {
@@ -136,7 +146,6 @@ func (c *cloudFrontClient) determineRootAndSubPath(bucketPath, originPath string
 	}
 
 	return
-
 }
 
 // For path rules, see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Invalidation.html

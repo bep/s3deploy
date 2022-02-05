@@ -47,7 +47,7 @@ func TestFlagsToConfig(t *testing.T) {
 	assert.Equal("mysource", cfg.SourcePath)
 	assert.Equal(true, cfg.Try)
 	assert.Equal("myregion", cfg.RegionName)
-	assert.Equal("mydistro", cfg.CDNDistributionID)
+	assert.Equal(Strings{"mydistro"}, cfg.CDNDistributionIDs)
 	assert.Equal("^ignored-prefix.*", cfg.Ignore)
 }
 

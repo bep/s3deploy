@@ -61,7 +61,6 @@ func TestReduceInvalidationPaths(t *testing.T) {
 	assert.Equal([]string{"/*"}, normalized)
 	normalized = client.normalizeInvalidationPaths("root", 5, true, rootPlusManyInDifferentFoldersNested...)
 	assert.Equal([]string{"/root/*"}, normalized)
-
 }
 
 func TestDetermineRootAndSubPath(t *testing.T) {
@@ -80,7 +79,6 @@ func TestDetermineRootAndSubPath(t *testing.T) {
 	check("/temp/forsale/", "temp", "/forsale", "temp")
 	check("root", "root", "/", "root")
 	check("root", "/root", "/", "root")
-
 }
 
 func TestPathsToInvalidationBatch(t *testing.T) {
@@ -99,13 +97,13 @@ func TestNewCloudFrontClient(t *testing.T) {
 	assert := require.New(t)
 	s := mock.Session
 	c, err := newCloudFrontClient(s, newPrinter(ioutil.Discard), Config{
-		CDNDistributionID: "12345",
-		Force:             true,
-		BucketPath:        "/mypath",
+		CDNDistributionIDs: Strings{"12345"},
+		Force:              true,
+		BucketPath:         "/mypath",
 	})
 	assert.NoError(err)
 	assert.NotNil(c)
-	assert.Equal("12345", c.distributionID)
+	assert.Equal("12345", c.distributionIDs[0])
 	assert.Equal("/mypath", c.bucketPath)
 	assert.Equal(true, c.force)
 }

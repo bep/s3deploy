@@ -29,7 +29,6 @@ Note that `s3deploy` is a perfect tool to use with a continuous integration tool
 ## Use
 
 ```bash
-Usage of ./s3deploy:
   -V	print version and exit
   -acl string
     	provide an ACL for uploaded objects. to make objects public, set to 'public-read'. all possible values are listed here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl (default "private")
@@ -37,8 +36,8 @@ Usage of ./s3deploy:
     	destination bucket name on AWS
   -config string
     	optional config file (default ".s3deploy.yml")
-  -distribution-id string
-    	optional CDN distribution ID for cache invalidation
+  -distribution-id value
+    	optional CDN distribution ID for cache invalidation, repeat flag for multiple distributions
   -force
     	upload even if the etags match
   -h	help

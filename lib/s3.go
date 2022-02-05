@@ -53,7 +53,7 @@ func newRemoteStore(cfg Config, logger printer) (*s3Store, error) {
 		return nil, err
 	}
 
-	if cfg.CDNDistributionID != "" {
+	if len(cfg.CDNDistributionIDs) > 0 {
 		cfc, err = newCloudFrontClient(sess, logger, cfg)
 		if err != nil {
 			return nil, err
@@ -70,7 +70,6 @@ func newRemoteStore(cfg Config, logger printer) (*s3Store, error) {
 	s = &s3Store{svc: s3.New(sess), cfc: cfc, acl: acl, bucket: cfg.BucketName, r: cfg.conf.Routes, bucketPath: cfg.BucketPath}
 
 	return s, nil
-
 }
 
 func (s *s3Store) FileMap(opts ...opOption) (map[string]file, error) {
@@ -93,7 +92,6 @@ func (s *s3Store) FileMap(opts ...opOption) (map[string]file, error) {
 }
 
 func (s *s3Store) Put(ctx context.Context, f localFile, opts ...opOption) error {
-
 	headers := f.Headers()
 
 	withHeaders := func(r *request.Request) {
