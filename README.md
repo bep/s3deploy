@@ -12,10 +12,10 @@ A simple tool to deploy static websites to Amazon S3 and CloudFront with Gzip an
 
 Pre-built binaries can be found [here](https://github.com/bep/s3deploy/releases/latest).
 
-**s3deploy** is a [Go application](https://golang.org/doc/install), so you can also get and build it yourself via `go get`:
+**s3deploy** is a [Go application](https://golang.org/doc/install), so you can also install the latest version with:
 
 ```bash
- go get -u -v github.com/bep/s3deploy/v2
+ go install github.com/bep/s3deploy/v2@latest
  ```
 
  To install on MacOS using Homebrew:
