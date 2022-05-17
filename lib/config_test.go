@@ -9,11 +9,11 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestFlagsToConfig(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	flags := flag.NewFlagSet("test", flag.PanicOnError)
 	args := []string{
 		"-bucket=mybucket",
@@ -33,26 +33,26 @@ func TestFlagsToConfig(t *testing.T) {
 	}
 
 	cfg, err := flagsToConfig(flags)
-	assert.NoError(err)
-	assert.NoError(flags.Parse(args))
-	assert.Equal("mybucket", cfg.BucketName)
-	assert.Equal("myconfig", cfg.ConfigFile)
-	assert.Equal(true, cfg.Force)
-	assert.Equal("mykey", cfg.AccessKey)
-	assert.Equal("mysecret", cfg.SecretKey)
-	assert.Equal(42, cfg.MaxDelete)
-	assert.Equal("public-read", cfg.ACL)
-	assert.Equal("mypath", cfg.BucketPath)
-	assert.Equal(true, cfg.Silent)
-	assert.Equal("mysource", cfg.SourcePath)
-	assert.Equal(true, cfg.Try)
-	assert.Equal("myregion", cfg.RegionName)
-	assert.Equal(Strings{"mydistro"}, cfg.CDNDistributionIDs)
-	assert.Equal("^ignored-prefix.*", cfg.Ignore)
+	c.Assert(err, qt.IsNil)
+	c.Assert(flags.Parse(args), qt.IsNil)
+	c.Assert(cfg.BucketName, qt.Equals, "mybucket")
+	c.Assert(cfg.ConfigFile, qt.Equals, "myconfig")
+	c.Assert(cfg.Force, qt.Equals, true)
+	c.Assert(cfg.AccessKey, qt.Equals, "mykey")
+	c.Assert(cfg.SecretKey, qt.Equals, "mysecret")
+	c.Assert(cfg.MaxDelete, qt.Equals, 42)
+	c.Assert(cfg.ACL, qt.Equals, "public-read")
+	c.Assert(cfg.BucketPath, qt.Equals, "mypath")
+	c.Assert(cfg.Silent, qt.Equals, true)
+	c.Assert(cfg.SourcePath, qt.Equals, "mysource")
+	c.Assert(cfg.Try, qt.Equals, true)
+	c.Assert(cfg.RegionName, qt.Equals, "myregion")
+	c.Assert(cfg.CDNDistributionIDs, qt.DeepEquals, Strings{"mydistro"})
+	c.Assert(cfg.Ignore, qt.Equals, "^ignored-prefix.*")
 }
 
 func TestSetAclAndPublicAccessFlag(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	flags := flag.NewFlagSet("test", flag.PanicOnError)
 	args := []string{
 		"-bucket=mybucket",
@@ -61,16 +61,16 @@ func TestSetAclAndPublicAccessFlag(t *testing.T) {
 	}
 
 	cfg, err := flagsToConfig(flags)
-	assert.NoError(err)
-	assert.NoError(flags.Parse(args))
+	c.Assert(err, qt.IsNil)
+	c.Assert(flags.Parse(args), qt.IsNil)
 
 	check_err := cfg.check()
-	assert.Error(check_err)
-	assert.Contains(check_err.Error(), "you passed a value for the flags public-access and acl")
+	c.Assert(check_err, qt.IsNotNil)
+	c.Assert(check_err.Error(), qt.Contains, "you passed a value for the flags public-access and acl")
 }
 
 func TestIgnoreFlagError(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	flags := flag.NewFlagSet("test", flag.PanicOnError)
 	args := []string{
 		"-bucket=mybucket",
@@ -78,16 +78,16 @@ func TestIgnoreFlagError(t *testing.T) {
 	}
 
 	cfg, err := flagsToConfig(flags)
-	assert.NoError(err)
-	assert.NoError(flags.Parse(args))
+	c.Assert(err, qt.IsNil)
+	c.Assert(flags.Parse(args), qt.IsNil)
 
 	check_err := cfg.check()
-	assert.Error(check_err)
-	assert.Contains(check_err.Error(), "cannot compile 'ignore' flag pattern")
+	c.Assert(check_err, qt.IsNotNil)
+	c.Assert(check_err.Error(), qt.Contains, "cannot compile 'ignore' flag pattern")
 }
 
 func TestShouldIgnore(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	flags_default := flag.NewFlagSet("test", flag.PanicOnError)
 	flags_ignore := flag.NewFlagSet("test", flag.PanicOnError)
@@ -111,18 +111,18 @@ func TestShouldIgnore(t *testing.T) {
 	check_err_default := cfg_default.check()
 	check_err_ignore := cfg_ignore.check()
 
-	assert.NoError(check_err_default)
-	assert.NoError(check_err_ignore)
+	c.Assert(check_err_default, qt.IsNil)
+	c.Assert(check_err_ignore, qt.IsNil)
 
-	assert.False(cfg_default.shouldIgnoreLocal("any"))
-	assert.False(cfg_default.shouldIgnoreLocal("ignored-prefix/file.txt"))
+	c.Assert(cfg_default.shouldIgnoreLocal("any"), qt.IsFalse)
+	c.Assert(cfg_default.shouldIgnoreLocal("ignored-prefix/file.txt"), qt.IsFalse)
 
-	assert.False(cfg_ignore.shouldIgnoreLocal("any"))
-	assert.True(cfg_ignore.shouldIgnoreLocal("ignored-prefix/file.txt"))
+	c.Assert(cfg_ignore.shouldIgnoreLocal("any"), qt.IsFalse)
+	c.Assert(cfg_ignore.shouldIgnoreLocal("ignored-prefix/file.txt"), qt.IsTrue)
 
-	assert.False(cfg_default.shouldIgnoreRemote("my/path/any"))
-	assert.False(cfg_default.shouldIgnoreRemote("my/path/ignored-prefix/file.txt"))
+	c.Assert(cfg_default.shouldIgnoreRemote("my/path/any"), qt.IsFalse)
+	c.Assert(cfg_default.shouldIgnoreRemote("my/path/ignored-prefix/file.txt"), qt.IsFalse)
 
-	assert.False(cfg_ignore.shouldIgnoreRemote("my/path/any"))
-	assert.True(cfg_ignore.shouldIgnoreRemote("my/path/ignored-prefix/file.txt"))
+	c.Assert(cfg_ignore.shouldIgnoreRemote("my/path/any"), qt.IsFalse)
+	c.Assert(cfg_ignore.shouldIgnoreRemote("my/path/ignored-prefix/file.txt"), qt.IsTrue)
 }

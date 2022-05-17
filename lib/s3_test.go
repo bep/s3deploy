@@ -4,11 +4,11 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestNewRemoteStoreNoAclProvided(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	cfg := Config{
 		BucketName: "example.com",
@@ -18,13 +18,13 @@ func TestNewRemoteStoreNoAclProvided(t *testing.T) {
 	}
 
 	s, err := newRemoteStore(cfg, newPrinter(ioutil.Discard))
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 
-	assert.Equal(s.acl, "private")
+	c.Assert("private", qt.Equals, s.acl)
 }
 
 func TestNewRemoteStoreAclProvided(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	cfg := Config{
 		BucketName: "example.com",
@@ -34,13 +34,13 @@ func TestNewRemoteStoreAclProvided(t *testing.T) {
 	}
 
 	s, err := newRemoteStore(cfg, newPrinter(ioutil.Discard))
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 
-	assert.Equal(s.acl, "public-read")
+	c.Assert("public-read", qt.Equals, s.acl)
 }
 
 func TestNewRemoteStoreOtherCannedAclProvided(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	cfg := Config{
 		BucketName: "example.com",
@@ -50,13 +50,13 @@ func TestNewRemoteStoreOtherCannedAclProvided(t *testing.T) {
 	}
 
 	s, err := newRemoteStore(cfg, newPrinter(ioutil.Discard))
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 
-	assert.Equal(s.acl, "bucket-owner-full-control")
+	c.Assert("bucket-owner-full-control", qt.Equals, s.acl)
 }
 
 func TestNewRemoteStoreDeprecatedPublicReadACLFlaglProvided(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	cfg := Config{
 		BucketName:    "example.com",
@@ -67,7 +67,7 @@ func TestNewRemoteStoreDeprecatedPublicReadACLFlaglProvided(t *testing.T) {
 	}
 
 	s, err := newRemoteStore(cfg, newPrinter(ioutil.Discard))
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 
-	assert.Equal(s.acl, "public-read")
+	c.Assert("public-read", qt.Equals, s.acl)
 }

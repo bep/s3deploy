@@ -12,26 +12,26 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/awstesting/mock"
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestReduceInvalidationPaths(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	var client *cloudFrontClient
 
-	assert.Equal([]string{"/root/"}, client.normalizeInvalidationPaths("root", 5, false, "/root/index.html"))
-	assert.Equal([]string{"/"}, client.normalizeInvalidationPaths("", 5, false, "/index.html"))
-	assert.Equal([]string{"/*"}, client.normalizeInvalidationPaths("", 5, true, "/a", "/b"))
-	assert.Equal([]string{"/root/*"}, client.normalizeInvalidationPaths("root", 5, true, "/a", "/b"))
+	c.Assert(client.normalizeInvalidationPaths("root", 5, false, "/root/index.html"), qt.DeepEquals, []string{"/root/"})
+	c.Assert(client.normalizeInvalidationPaths("", 5, false, "/index.html"), qt.DeepEquals, []string{"/"})
+	c.Assert(client.normalizeInvalidationPaths("", 5, true, "/a", "/b"), qt.DeepEquals, []string{"/*"})
+	c.Assert(client.normalizeInvalidationPaths("root", 5, true, "/a", "/b"), qt.DeepEquals, []string{"/root/*"})
 
 	rootPlusMany := append([]string{"/index.html", "/styles.css"}, createFiles("css", false, 20)...)
 	normalized := client.normalizeInvalidationPaths("", 5, false, rootPlusMany...)
-	assert.Equal(3, len(normalized))
-	assert.Equal([]string{"/", "/css/*", "/styles.css"}, normalized)
+	c.Assert(len(normalized), qt.DeepEquals, 3)
+	c.Assert(normalized, qt.DeepEquals, []string{"/", "/css/*", "/styles.css"})
 
 	rootPlusManyInDifferentFolders := append([]string{"/index.html", "/styles.css"}, createFiles("css", true, 20)...)
-	assert.Equal([]string{"/*"}, client.normalizeInvalidationPaths("", 5, false, rootPlusManyInDifferentFolders...))
+	c.Assert(client.normalizeInvalidationPaths("", 5, false, rootPlusManyInDifferentFolders...), qt.DeepEquals, []string{"/*"})
 
 	rootPlusManyInDifferentFoldersNested := append([]string{"/index.html", "/styles.css"}, createFiles("blog", false, 10)...)
 	rootPlusManyInDifferentFoldersNested = append(rootPlusManyInDifferentFoldersNested, createFiles("blog/l1", false, 10)...)
@@ -42,37 +42,37 @@ func TestReduceInvalidationPaths(t *testing.T) {
 
 	// avoid situations where many changes in some HTML template triggers update in /images and similar
 	normalized = client.normalizeInvalidationPaths("", 5, false, rootPlusManyInDifferentFoldersNested...)
-	assert.Equal(4, len(normalized))
-	assert.Equal([]string{"/", "/about/*", "/blog/*", "/styles.css"}, normalized)
+	c.Assert(len(normalized), qt.Equals, 4)
+	c.Assert(normalized, qt.DeepEquals, []string{"/", "/about/*", "/blog/*", "/styles.css"})
 
 	changes := []string{"/hugoscss/categories/index.html", "/hugoscss/index.html", "/hugoscss/tags/index.html", "/hugoscss/post/index.html", "/hugoscss/post/hello-scss/index.html", "/hugoscss/styles/main.min.36816b22057425f8a5f66b73918446b0cd793c0c6125406c285948f507599d1e.css"}
 	normalized = client.normalizeInvalidationPaths("/hugoscss", 3, false, changes...)
-	assert.Equal([]string{"/hugoscss/*"}, normalized)
+	c.Assert(normalized, qt.DeepEquals, []string{"/hugoscss/*"})
 
 	changes = []string{"/a/b1/a.css", "/a/b2/b.css"}
 	normalized = client.normalizeInvalidationPaths("/", 3, false, changes...)
-	assert.Equal([]string{"/a/b1/a.css", "/a/b2/b.css"}, normalized)
+	c.Assert(normalized, qt.DeepEquals, []string{"/a/b1/a.css", "/a/b2/b.css"})
 
 	normalized = client.normalizeInvalidationPaths("/", 1, false, changes...)
-	assert.Equal([]string{"/a/*"}, normalized)
+	c.Assert(normalized, qt.DeepEquals, []string{"/a/*"})
 
 	// Force
 	normalized = client.normalizeInvalidationPaths("", 5, true, rootPlusManyInDifferentFoldersNested...)
-	assert.Equal([]string{"/*"}, normalized)
+	c.Assert(normalized, qt.DeepEquals, []string{"/*"})
 	normalized = client.normalizeInvalidationPaths("root", 5, true, rootPlusManyInDifferentFoldersNested...)
-	assert.Equal([]string{"/root/*"}, normalized)
+	c.Assert(normalized, qt.DeepEquals, []string{"/root/*"})
 }
 
 func TestDetermineRootAndSubPath(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	var client *cloudFrontClient
 
 	check := func(bucketPath, originPath, expectWebContextRoot, expectSubPath string) {
 		t.Helper()
 		s1, s2 := client.determineRootAndSubPath(bucketPath, originPath)
-		assert.Equal(expectWebContextRoot, s1)
-		assert.Equal(expectSubPath, s2)
+		c.Assert(s1, qt.Equals, expectWebContextRoot)
+		c.Assert(s2, qt.Equals, expectSubPath)
 	}
 
 	check("temp/forsale", "temp", "/forsale", "temp")
@@ -82,30 +82,30 @@ func TestDetermineRootAndSubPath(t *testing.T) {
 }
 
 func TestPathsToInvalidationBatch(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	var client *cloudFrontClient
 
 	batch := client.pathsToInvalidationBatch("myref", "/path1/", "/path2/")
 
-	assert.NotNil(batch)
-	assert.Equal("myref", *batch.CallerReference)
-	assert.Equal(2, int(*batch.Paths.Quantity))
+	c.Assert(batch, qt.IsNotNil)
+	c.Assert(*batch.CallerReference, qt.Equals, "myref")
+	c.Assert(int(*batch.Paths.Quantity), qt.Equals, 2)
 }
 
 func TestNewCloudFrontClient(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	s := mock.Session
-	c, err := newCloudFrontClient(s, newPrinter(ioutil.Discard), Config{
+	client, err := newCloudFrontClient(s, newPrinter(ioutil.Discard), Config{
 		CDNDistributionIDs: Strings{"12345"},
 		Force:              true,
 		BucketPath:         "/mypath",
 	})
-	assert.NoError(err)
-	assert.NotNil(c)
-	assert.Equal("12345", c.distributionIDs[0])
-	assert.Equal("/mypath", c.bucketPath)
-	assert.Equal(true, c.force)
+	c.Assert(err, qt.IsNil)
+	c.Assert(client, qt.IsNotNil)
+	c.Assert(client.distributionIDs[0], qt.Equals, "12345")
+	c.Assert(client.bucketPath, qt.Equals, "/mypath")
+	c.Assert(client.force, qt.Equals, true)
 }
 
 func createFiles(root string, differentFolders bool, num int) []string {

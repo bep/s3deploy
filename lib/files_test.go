@@ -6,40 +6,39 @@
 package lib
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestOSFile(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	of, err := openTestFile("main.css")
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 
-	assert.Equal(int64(3), of.Size())
-	assert.Equal(`"902fbdd2b1df0c4f70b4a5d23525e932"`, of.ETag())
-	assert.NotNil(of.Content())
+	c.Assert(of.Size(), qt.Equals, int64(3))
+	c.Assert(of.ETag(), qt.Equals, `"902fbdd2b1df0c4f70b4a5d23525e932"`)
+	c.Assert(of.Content(), qt.IsNotNil)
 	b, err := ioutil.ReadAll(of.Content())
-	assert.NoError(err)
-	assert.Equal("ABC", string(b))
-	assert.Equal("text/css; charset=utf-8", of.Headers()["Content-Type"])
+	c.Assert(err, qt.IsNil)
+	c.Assert(string(b), qt.Equals, "ABC")
+	c.Assert(of.Headers()["Content-Type"], qt.Equals, "text/css; charset=utf-8")
 }
 
 func TestShouldThisReplace(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	of, err := openTestFile("main.css")
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 
 	correctETag := `"902fbdd2b1df0c4f70b4a5d23525e932"`
 
-	for i, test := range []struct {
+	for _, test := range []struct {
 		testFile
 		expect       bool
 		expectReason string
@@ -48,18 +47,17 @@ func TestShouldThisReplace(t *testing.T) {
 		{testFile{"k2", int64(3), "FOO"}, true, "ETag"},
 		{testFile{"k3", int64(3), correctETag}, false, ""},
 	} {
-		message := fmt.Sprintf("Test %d", i)
 		b, reason := of.shouldThisReplace(test.testFile)
-		assert.Equal(test.expect, b, message)
-		assert.Equal(uploadReason(test.expectReason), reason)
+		c.Assert(b, qt.Equals, test.expect)
+		c.Assert(reason, qt.Equals, uploadReason(test.expectReason))
 	}
 }
 
 func TestDetectContentTypeFromContent(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
-	assert.Equal("text/html; charset=utf-8", detectContentTypeFromContent([]byte("<html>foo</html>")))
-	assert.Equal("text/html; charset=utf-8", detectContentTypeFromContent([]byte("<html>"+strings.Repeat("abc", 300)+"</html>")))
+	c.Assert(detectContentTypeFromContent([]byte("<html>foo</html>")), qt.Equals, "text/html; charset=utf-8")
+	c.Assert(detectContentTypeFromContent([]byte("<html>"+strings.Repeat("abc", 300)+"</html>")), qt.Equals, "text/html; charset=utf-8")
 }
 
 type testFile struct {
