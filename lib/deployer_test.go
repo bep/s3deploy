@@ -16,7 +16,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 var (
@@ -24,7 +24,7 @@ var (
 )
 
 func TestDeploy(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	store, m := newTestStore(0, "")
 	source := testSourcePath()
 	configFile := filepath.Join(source, ".s3deploy.yml")
@@ -41,20 +41,19 @@ func TestDeploy(t *testing.T) {
 	}
 
 	stats, err := Deploy(cfg)
-	assert.NoError(err)
-	assert.Equal("Deleted 1 of 1, uploaded 3, skipped 1 (80% changed)", stats.Summary())
+	c.Assert(err, qt.IsNil)
+	c.Assert(stats.Summary(), qt.Equals, "Deleted 1 of 1, uploaded 3, skipped 1 (80% changed)")
 	assertKeys(t, m, ".s3deploy.yml", "main.css", "index.html", "ab.txt")
 
 	mainCss := m["main.css"]
-	assert.IsType(&osFile{}, mainCss)
 	headers := mainCss.(*osFile).Headers()
-	assert.Equal("gzip", headers["Content-Encoding"])
-	assert.Equal("text/css; charset=utf-8", headers["Content-Type"])
-	assert.Equal("max-age=630720000, no-transform, public", headers["Cache-Control"])
+	c.Assert(headers["Content-Encoding"], qt.Equals, "gzip")
+	c.Assert(headers["Content-Type"], qt.Equals, "text/css; charset=utf-8")
+	c.Assert(headers["Cache-Control"], qt.Equals, "max-age=630720000, no-transform, public")
 }
 
 func TestDeployWithBucketPath(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	root := "my/path"
 	store, m := newTestStore(0, root)
 	source := testSourcePath()
@@ -72,19 +71,18 @@ func TestDeployWithBucketPath(t *testing.T) {
 	}
 
 	stats, err := Deploy(cfg)
-	assert.NoError(err)
-	assert.Equal("Deleted 1 of 1, uploaded 3, skipped 1 (80% changed)", stats.Summary())
+	c.Assert(err, qt.IsNil)
+	c.Assert(stats.Summary(), qt.Equals, "Deleted 1 of 1, uploaded 3, skipped 1 (80% changed)")
 	assertKeys(t, m, "my/path/.s3deploy.yml", "my/path/main.css", "my/path/index.html", "my/path/ab.txt")
 	mainCss := m["my/path/main.css"]
-	assert.IsType(&osFile{}, mainCss)
-	assert.Equal("my/path/main.css", mainCss.(*osFile).Key())
+	c.Assert(mainCss.(*osFile).Key(), qt.Equals, "my/path/main.css")
 	headers := mainCss.(*osFile).Headers()
-	assert.Equal("gzip", headers["Content-Encoding"])
+	c.Assert(headers["Content-Encoding"], qt.Equals, "gzip")
 
 }
 
 func TestDeployForce(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	store, _ := newTestStore(0, "")
 	source := testSourcePath()
 
@@ -99,12 +97,12 @@ func TestDeployForce(t *testing.T) {
 	}
 
 	stats, err := Deploy(cfg)
-	assert.NoError(err)
-	assert.Equal("Deleted 1 of 1, uploaded 4, skipped 0 (100% changed)", stats.Summary())
+	c.Assert(err, qt.IsNil)
+	c.Assert(stats.Summary(), qt.Equals, "Deleted 1 of 1, uploaded 4, skipped 0 (100% changed)")
 }
 
 func TestDeployWitIgnorePattern(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	root := "my/path"
 	re := `^(main\.css|deleteme\.txt)$`
 
@@ -128,8 +126,8 @@ func TestDeployWitIgnorePattern(t *testing.T) {
 	prevTag := prevCss.ETag()
 
 	stats, err := Deploy(cfg)
-	assert.NoError(err)
-	assert.Equal("Deleted 0 of 0, uploaded 2, skipped 1 (67% changed)", stats.Summary())
+	c.Assert(err, qt.IsNil)
+	c.Assert(stats.Summary(), qt.Equals, "Deleted 0 of 0, uploaded 2, skipped 1 (67% changed)")
 	assertKeys(t, m,
 		"my/path/.s3deploy.yml",
 		"my/path/index.html",
@@ -138,12 +136,12 @@ func TestDeployWitIgnorePattern(t *testing.T) {
 		"my/path/main.css",     // ignored: not updated
 	)
 	mainCss := m["my/path/main.css"]
-	assert.Equal(mainCss.ETag(), prevTag)
+	c.Assert(prevTag, qt.Equals, mainCss.ETag())
 
 }
 
 func TestDeploySourceNotFound(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	store, _ := newTestStore(0, "")
 	wd, _ := os.Getwd()
 	source := filepath.Join(wd, "thisdoesnotexist")
@@ -158,14 +156,14 @@ func TestDeploySourceNotFound(t *testing.T) {
 	}
 
 	stats, err := Deploy(cfg)
-	assert.Error(err)
-	assert.Contains(err.Error(), "thisdoesnotexist")
-	assert.Contains(stats.Summary(), "Deleted 0 of 0, uploaded 0, skipped 0")
+	c.Assert(err, qt.IsNotNil)
+	c.Assert(err.Error(), qt.Contains, "thisdoesnotexist")
+	c.Assert(stats.Summary(), qt.Contains, "Deleted 0 of 0, uploaded 0, skipped 0")
 
 }
 
 func TestDeployInvalidSourcePath(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	store, _ := newTestStore(0, "")
 	root := "/"
 
@@ -183,21 +181,21 @@ func TestDeployInvalidSourcePath(t *testing.T) {
 	}
 
 	stats, err := Deploy(cfg)
-	assert.Error(err)
-	assert.Contains(err.Error(), "invalid source path")
-	assert.Contains(stats.Summary(), "Deleted 0 of 0, uploaded 0, skipped 0")
+	c.Assert(err, qt.IsNotNil)
+	c.Assert(err.Error(), qt.Contains, "invalid source path")
+	c.Assert(stats.Summary(), qt.Contains, "Deleted 0 of 0, uploaded 0, skipped 0")
 
 }
 
 func TestDeployNoBucket(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	_, err := Deploy(&Config{Silent: true})
-	assert.Error(err)
+	c.Assert(err, qt.IsNotNil)
 }
 
 func TestDeployStoreFailures(t *testing.T) {
 	for i := 1; i <= 3; i++ {
-		assert := require.New(t)
+		c := qt.New(t)
 
 		store, _ := newTestStore(i, "")
 		source := testSourcePath()
@@ -214,19 +212,19 @@ func TestDeployStoreFailures(t *testing.T) {
 		message := fmt.Sprintf("Failure %d", i)
 
 		stats, err := Deploy(cfg)
-		assert.Error(err)
+		c.Assert(err, qt.IsNotNil)
 
 		if i == 3 {
 			// Fail delete step
-			assert.Contains(stats.Summary(), "Deleted 0 of 0, uploaded 3", message)
+			c.Assert(stats.Summary(), qt.Contains, "Deleted 0 of 0, uploaded 3", qt.Commentf(message))
 		} else {
-			assert.Contains(stats.Summary(), "Deleted 0 of 0, uploaded 0", message)
+			c.Assert(stats.Summary(), qt.Contains, "Deleted 0 of 0, uploaded 0", qt.Commentf(message))
 		}
 	}
 }
 
 func TestDeployMaxDelete(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	m := make(map[string]file)
 
@@ -246,9 +244,9 @@ func TestDeployMaxDelete(t *testing.T) {
 	}
 
 	stats, err := Deploy(cfg)
-	assert.NoError(err)
-	assert.Equal(158+4, len(m))
-	assert.Equal("Deleted 42 of 200, uploaded 4, skipped 0 (100% changed)", stats.Summary())
+	c.Assert(err, qt.IsNil)
+	c.Assert(len(m), qt.Equals, 158+4)
+	c.Assert(stats.Summary(), qt.Equals, "Deleted 42 of 200, uploaded 4, skipped 0 (100% changed)")
 
 }
 

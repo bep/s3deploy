@@ -9,26 +9,26 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestChunkStrings(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	c1 := chunkStrings([]string{"a", "b", "c", "d"}, 2)
 	c2 := chunkStrings([]string{"a", "b", "c", "d"}, 3)
 	c3 := chunkStrings([]string{}, 2)
-	assert.Equal([][]string{{"a", "b"}, {"c", "d"}}, c1)
-	assert.Equal([][]string{{"a", "b", "c"}, {"d"}}, c2)
-	assert.Equal(0, len(c3))
+	c.Assert(c1, qt.DeepEquals, [][]string{{"a", "b"}, {"c", "d"}})
+	c.Assert(c2, qt.DeepEquals, [][]string{{"a", "b", "c"}, {"d"}})
+	c.Assert(len(c3), qt.Equals, 0)
 }
 
 func TestNoUpdateStore(t *testing.T) {
 	store := new(noUpdateStore)
-	assert := require.New(t)
+	c := qt.New(t)
 	m, err := store.FileMap()
-	assert.NoError(err)
-	assert.Equal(0, len(m))
-	assert.NoError(store.DeleteObjects(context.Background(), nil))
-	assert.NoError(store.Put(context.Background(), nil))
+	c.Assert(err, qt.IsNil)
+	c.Assert(len(m), qt.Equals, 0)
+	c.Assert(store.DeleteObjects(context.Background(), nil), qt.IsNil)
+	c.Assert(store.Put(context.Background(), nil), qt.IsNil)
 }

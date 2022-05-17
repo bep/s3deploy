@@ -3,11 +3,11 @@ package lib
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestPathEscapeRFC1738(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	testCases := []struct {
 		input    string
@@ -29,6 +29,6 @@ func TestPathEscapeRFC1738(t *testing.T) {
 
 	for _, tc := range testCases {
 		actual := pathEscapeRFC1738(tc.input)
-		assert.Equal(actual, tc.expected)
+		c.Assert(actual, qt.Equals, tc.expected)
 	}
 }
