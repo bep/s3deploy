@@ -35,7 +35,8 @@ type cloudFrontClient struct {
 func newCloudFrontClient(
 	sess *session.Session,
 	logger printer,
-	cfg Config) (*cloudFrontClient, error) {
+	cfg Config,
+) (*cloudFrontClient, error) {
 	if len(cfg.CDNDistributionIDs) == 0 {
 		return nil, errors.New("must provide one or more distribution ID")
 	}
@@ -153,8 +154,8 @@ func (c *cloudFrontClient) normalizeInvalidationPaths(
 	root string,
 	threshold int,
 	force bool,
-	paths ...string) []string {
-
+	paths ...string,
+) []string {
 	if !strings.HasPrefix(root, "/") {
 		root = "/" + root
 	}

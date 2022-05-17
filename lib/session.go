@@ -43,7 +43,6 @@ func newSession(cfg Config) (*session.Session, error) {
 		// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#hdr-Sessions_from_Shared_Config
 		SharedConfigState: session.SharedConfigStateFromEnv,
 	})
-
 }
 
 func createCredentials(cfg Config) (*credentials.Credentials, error) {

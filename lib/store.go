@@ -100,7 +100,6 @@ func (s *store) DeleteObjects(ctx context.Context, keys []string, opts ...opOpti
 		keyChunk := keyChunks[i]
 
 		err := s.delegate.DeleteObjects(ctx, keyChunk, opts...)
-
 		if err != nil {
 			return err
 		}
@@ -150,7 +149,6 @@ func (s *noUpdateStore) Finalize() error {
 func (s *noUpdateStore) InvalidateCDNCache(paths ...string) error {
 	fmt.Println("\nInvalidate CDN:", paths)
 	return nil
-
 }
 
 type opConfig struct {

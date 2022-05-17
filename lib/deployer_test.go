@@ -19,9 +19,7 @@ import (
 	qt "github.com/frankban/quicktest"
 )
 
-var (
-	_ remoteStore = (*testStore)(nil)
-)
+var _ remoteStore = (*testStore)(nil)
 
 func TestDeploy(t *testing.T) {
 	c := qt.New(t)
@@ -78,7 +76,6 @@ func TestDeployWithBucketPath(t *testing.T) {
 	c.Assert(mainCss.(*osFile).Key(), qt.Equals, "my/path/main.css")
 	headers := mainCss.(*osFile).Headers()
 	c.Assert(headers["Content-Encoding"], qt.Equals, "gzip")
-
 }
 
 func TestDeployForce(t *testing.T) {
@@ -137,7 +134,6 @@ func TestDeployWitIgnorePattern(t *testing.T) {
 	)
 	mainCss := m["my/path/main.css"]
 	c.Assert(prevTag, qt.Equals, mainCss.ETag())
-
 }
 
 func TestDeploySourceNotFound(t *testing.T) {
@@ -159,7 +155,6 @@ func TestDeploySourceNotFound(t *testing.T) {
 	c.Assert(err, qt.IsNotNil)
 	c.Assert(err.Error(), qt.Contains, "thisdoesnotexist")
 	c.Assert(stats.Summary(), qt.Contains, "Deleted 0 of 0, uploaded 0, skipped 0")
-
 }
 
 func TestDeployInvalidSourcePath(t *testing.T) {
@@ -184,7 +179,6 @@ func TestDeployInvalidSourcePath(t *testing.T) {
 	c.Assert(err, qt.IsNotNil)
 	c.Assert(err.Error(), qt.Contains, "invalid source path")
 	c.Assert(stats.Summary(), qt.Contains, "Deleted 0 of 0, uploaded 0, skipped 0")
-
 }
 
 func TestDeployNoBucket(t *testing.T) {
@@ -247,7 +241,6 @@ func TestDeployMaxDelete(t *testing.T) {
 	c.Assert(err, qt.IsNil)
 	c.Assert(len(m), qt.Equals, 158+4)
 	c.Assert(stats.Summary(), qt.Equals, "Deleted 42 of 200, uploaded 4, skipped 0 (100% changed)")
-
 }
 
 func testSourcePath() string {

@@ -160,7 +160,6 @@ func detectContentTypeFromContent(b []byte) string {
 	}
 
 	return http.DetectContentType(peek)
-
 }
 
 func (f *osFile) shouldThisReplace(other file) (bool, uploadReason) {
@@ -221,7 +220,6 @@ func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInf
 type routes []*route
 
 func (r routes) get(path string) *route {
-
 	for _, route := range r {
 		if route.routerRE.MatchString(path) {
 			return route
@@ -230,7 +228,6 @@ func (r routes) get(path string) *route {
 
 	// no route found
 	return nil
-
 }
 
 // read config from .s3deploy.yml if found.
@@ -247,7 +244,6 @@ type route struct {
 }
 
 func calculateETag(r io.Reader) (string, error) {
-
 	h := md5.New()
 
 	_, err := io.Copy(h, r)

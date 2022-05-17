@@ -74,13 +74,14 @@ func Deploy(cfg *Config) (DeployStats, error) {
 	g, ctx = errgroup.WithContext(ctx)
 	defer cancel()
 
-	var d = &Deployer{
+	d := &Deployer{
 		g:             g,
 		outv:          outv,
 		printer:       newPrinter(out),
 		filesToUpload: make(chan *osFile),
 		cfg:           cfg,
-		stats:         &DeployStats{}}
+		stats:         &DeployStats{},
+	}
 
 	numberOfWorkers := cfg.NumberOfWorkers
 	if numberOfWorkers <= 0 {
