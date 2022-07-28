@@ -289,6 +289,10 @@ func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFi
 			return err
 		}
 
+		if f.route != nil && f.route.Ignore {
+			return nil
+		}
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
