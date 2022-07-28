@@ -239,6 +239,7 @@ type route struct {
 	Route   string            `yaml:"route"`
 	Headers map[string]string `yaml:"headers"`
 	Gzip    bool              `yaml:"gzip"`
+	Ignore  bool              `yaml:"ignore"`
 
 	routerRE *regexp.Regexp // compiled version of Route
 }

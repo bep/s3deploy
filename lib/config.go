@@ -140,12 +140,19 @@ func (cfg *Config) shouldIgnoreLocal(key string) bool {
 }
 
 func (cfg *Config) shouldIgnoreRemote(key string) bool {
-	if cfg.Ignore == "" {
-		return false
-	}
 
 	sub := key[len(cfg.BucketPath):]
 	sub = strings.TrimPrefix(sub, "/")
+
+	for _, r := range cfg.conf.Routes {
+		if r.Ignore && r.routerRE.MatchString(sub) {
+			return true
+		}
+	}
+
+	if cfg.Ignore == "" {
+		return false
+	}
 
 	return cfg.IgnoreRE.MatchString(sub)
 }

@@ -136,6 +136,44 @@ func TestDeployWitIgnorePattern(t *testing.T) {
 	c.Assert(prevTag, qt.Equals, mainCss.ETag())
 }
 
+func TestDeployWitRoutesIgnore(t *testing.T) {
+	c := qt.New(t)
+	root := "my/path"
+
+	store, m := newTestStore(0, root)
+	source := testSourcePath()
+	configFile := filepath.Join(source, ".hidden/.s3deploy.ignore.yml")
+
+	cfg := &Config{
+		BucketName: "example.com",
+		RegionName: "eu-west-1",
+		ConfigFile: configFile,
+		BucketPath: root,
+		MaxDelete:  300,
+		Silent:     false,
+		SourcePath: source,
+		baseStore:  store,
+	}
+
+	// same as TestDeployWitIgnorePattern
+
+	prevCss := m["my/path/main.css"]
+	prevTag := prevCss.ETag()
+
+	stats, err := Deploy(cfg)
+	c.Assert(err, qt.IsNil)
+	c.Assert(stats.Summary(), qt.Equals, "Deleted 0 of 0, uploaded 2, skipped 1 (67% changed)")
+	assertKeys(t, m,
+		"my/path/.s3deploy.yml",
+		"my/path/index.html",
+		"my/path/ab.txt",
+		"my/path/deleteme.txt", // ignored: stale
+		"my/path/main.css",     // ignored: not updated
+	)
+	mainCss := m["my/path/main.css"]
+	c.Assert(prevTag, qt.Equals, mainCss.ETag())
+}
+
 func TestDeploySourceNotFound(t *testing.T) {
 	c := qt.New(t)
 	store, _ := newTestStore(0, "")
