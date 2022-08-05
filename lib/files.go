@@ -50,6 +50,7 @@ type localFile interface {
 	Content() io.ReadSeeker
 
 	Headers() map[string]string
+	ACL() string
 }
 
 type osFile struct {
@@ -123,6 +124,10 @@ func (f *osFile) Headers() map[string]string {
 	}
 
 	return headers
+}
+
+func (f *osFile) ACL() string {
+	return f.route.ACL
 }
 
 func (f *osFile) initContentType(peek []byte) error {
@@ -240,6 +245,7 @@ type route struct {
 	Headers map[string]string `yaml:"headers"`
 	Gzip    bool              `yaml:"gzip"`
 	Ignore  bool              `yaml:"ignore"`
+	ACL     string            `yaml:"acl"`
 
 	routerRE *regexp.Regexp // compiled version of Route
 }

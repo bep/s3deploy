@@ -27,12 +27,13 @@ func TestDeploy(t *testing.T) {
 	source := testSourcePath()
 	configFile := filepath.Join(source, ".s3deploy.yml")
 
+	storeACL := "public-read"
 	cfg := &Config{
 		BucketName: "example.com",
 		RegionName: "eu-west-1",
 		ConfigFile: configFile,
 		MaxDelete:  300,
-		ACL:        "public-read",
+		ACL:        storeACL,
 		Silent:     true,
 		SourcePath: source,
 		baseStore:  store,
@@ -48,6 +49,10 @@ func TestDeploy(t *testing.T) {
 	c.Assert(headers["Content-Encoding"], qt.Equals, "gzip")
 	c.Assert(headers["Content-Type"], qt.Equals, "text/css; charset=utf-8")
 	c.Assert(headers["Cache-Control"], qt.Equals, "max-age=630720000, no-transform, public")
+
+	c.Assert(mainCss.(*osFile).ACL(), qt.Equals, "private") // route-configured
+	indexHtml := m["index.html"]
+	c.Assert(indexHtml.(*osFile).ACL(), qt.Equals, storeACL)
 }
 
 func TestDeployWithBucketPath(t *testing.T) {
@@ -279,6 +284,91 @@ func TestDeployMaxDelete(t *testing.T) {
 	c.Assert(err, qt.IsNil)
 	c.Assert(len(m), qt.Equals, 158+4)
 	c.Assert(stats.Summary(), qt.Equals, "Deleted 42 of 200, uploaded 4, skipped 0 (100% changed)")
+}
+
+func TestDeployNoACLProvided(t *testing.T) {
+	c := qt.New(t)
+	store, m := newTestStore(0, "")
+	source := testSourcePath()
+	configFile := filepath.Join(source, ".s3deploy.yml")
+
+	cfg := &Config{
+		BucketName: "example.com",
+		RegionName: "eu-west-1",
+		ConfigFile: configFile,
+		MaxDelete:  300,
+		ACL:        "",
+		Silent:     true,
+		SourcePath: source,
+		baseStore:  store,
+	}
+
+	stats, err := Deploy(cfg)
+	c.Assert(err, qt.IsNil)
+	c.Assert(stats.Summary(), qt.Equals, "Deleted 1 of 1, uploaded 3, skipped 1 (80% changed)")
+	assertKeys(t, m, ".s3deploy.yml", "main.css", "index.html", "ab.txt")
+
+	mainCss := m["main.css"]
+	indexHtml := m["index.html"]
+	c.Assert(mainCss.(*osFile).ACL(), qt.Equals, "private")   // route-configured
+	c.Assert(indexHtml.(*osFile).ACL(), qt.Equals, "private") // default private
+}
+
+func TestDeployOtherCannedACLProvided(t *testing.T) {
+	c := qt.New(t)
+	store, m := newTestStore(0, "")
+	source := testSourcePath()
+	configFile := filepath.Join(source, ".s3deploy.yml")
+
+	cfg := &Config{
+		BucketName: "example.com",
+		RegionName: "eu-west-1",
+		ConfigFile: configFile,
+		MaxDelete:  300,
+		ACL:        "bucket-owner-full-control",
+		Silent:     true,
+		SourcePath: source,
+		baseStore:  store,
+	}
+
+	stats, err := Deploy(cfg)
+	c.Assert(err, qt.IsNil)
+	c.Assert(stats.Summary(), qt.Equals, "Deleted 1 of 1, uploaded 3, skipped 1 (80% changed)")
+	assertKeys(t, m, ".s3deploy.yml", "main.css", "index.html", "ab.txt")
+
+	mainCss := m["main.css"]
+	indexHtml := m["index.html"]
+	c.Assert(mainCss.(*osFile).ACL(), qt.Equals, "private") // route-configured
+	c.Assert(indexHtml.(*osFile).ACL(), qt.Equals, "bucket-owner-full-control")
+}
+
+func TestDeployDeprecatedPublicReadACLFlagProvided(t *testing.T) {
+	c := qt.New(t)
+	store, m := newTestStore(0, "")
+	source := testSourcePath()
+	configFile := filepath.Join(source, ".s3deploy.yml")
+
+	cfg := &Config{
+		BucketName:    "example.com",
+		RegionName:    "eu-west-1",
+		ConfigFile:    configFile,
+		MaxDelete:     300,
+		ACL:           "",
+		PublicReadACL: true,
+		Silent:        true,
+		SourcePath:    source,
+		baseStore:     store,
+	}
+
+	stats, err := Deploy(cfg)
+	c.Assert(err, qt.IsNil)
+	c.Assert(stats.Summary(), qt.Equals, "Deleted 1 of 1, uploaded 3, skipped 1 (80% changed)")
+	assertKeys(t, m, ".s3deploy.yml", "main.css", "index.html", "ab.txt")
+
+	mainCss := m["main.css"]
+	indexHtml := m["index.html"]
+	c.Assert(mainCss.(*osFile).ACL(), qt.Equals, "private") // route-configured
+	c.Assert(indexHtml.(*osFile).ACL(), qt.Equals, "public-read")
 }
 
 func testSourcePath() string {
