@@ -348,7 +348,18 @@ func (d *Deployer) loadConfig() error {
 		return err
 	}
 
+	acl := "private"
+	if d.cfg.ACL != "" {
+		acl = d.cfg.ACL
+	} else if d.cfg.PublicReadACL {
+		acl = "public-read"
+	}
+
 	for _, r := range conf.Routes {
+		if r.ACL == "" {
+			r.ACL = acl
+		}
+
 		r.routerRE, err = regexp.Compile(r.Route)
 
 		if err != nil {

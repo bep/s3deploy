@@ -24,7 +24,6 @@ type s3Store struct {
 	bucketPath string
 	r          routes
 	svc        *s3.S3
-	acl        string
 	cfc        *cloudFrontClient
 }
 
@@ -60,14 +59,7 @@ func newRemoteStore(cfg Config, logger printer) (*s3Store, error) {
 		}
 	}
 
-	acl := "private"
-	if cfg.ACL != "" {
-		acl = cfg.ACL
-	} else if cfg.PublicReadACL {
-		acl = "public-read"
-	}
-
-	s = &s3Store{svc: s3.New(sess), cfc: cfc, acl: acl, bucket: cfg.BucketName, r: cfg.conf.Routes, bucketPath: cfg.BucketPath}
+	s = &s3Store{svc: s3.New(sess), cfc: cfc, bucket: cfg.BucketName, r: cfg.conf.Routes, bucketPath: cfg.BucketPath}
 
 	return s, nil
 }
@@ -93,6 +85,7 @@ func (s *s3Store) FileMap(opts ...opOption) (map[string]file, error) {
 
 func (s *s3Store) Put(ctx context.Context, f localFile, opts ...opOption) error {
 	headers := f.Headers()
+	acl := f.ACL()
 
 	withHeaders := func(r *request.Request) {
 		for k, v := range headers {
@@ -104,7 +97,7 @@ func (s *s3Store) Put(ctx context.Context, f localFile, opts ...opOption) error 
 		Bucket:        aws.String(s.bucket),
 		Key:           aws.String(f.Key()),
 		Body:          f.Content(),
-		ACL:           aws.String(s.acl),
+		ACL:           aws.String(acl),
 		ContentLength: aws.Int64(f.Size()),
 	}, withHeaders)
 

@@ -107,6 +107,8 @@ routes:
       headers:
          Cache-Control: "max-age=630720000, no-transform, public"
       gzip: false
+      #  configure route-scoped ACL
+      acl: public-read
     - route: "^.+\\.(html|xml|json)$"
       gzip: true
 ```
