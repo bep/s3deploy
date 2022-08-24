@@ -156,3 +156,13 @@ func (cfg *Config) shouldIgnoreRemote(key string) bool {
 
 	return cfg.IgnoreRE.MatchString(sub)
 }
+
+func (cfg *Config) getDefaultACL() string {
+	acl := "private"
+	if cfg.ACL != "" {
+		acl = cfg.ACL
+	} else if cfg.PublicReadACL {
+		acl = "public-read"
+	}
+	return acl
+}

@@ -126,3 +126,43 @@ func TestShouldIgnore(t *testing.T) {
 	c.Assert(cfg_ignore.shouldIgnoreRemote("my/path/any"), qt.IsFalse)
 	c.Assert(cfg_ignore.shouldIgnoreRemote("my/path/ignored-prefix/file.txt"), qt.IsTrue)
 }
+
+func TestGetDefaultACL(t *testing.T) {
+	c := qt.New(t)
+
+	flags_empty := flag.NewFlagSet("test", flag.PanicOnError)
+	flags_acl := flag.NewFlagSet("test", flag.PanicOnError)
+	flags_publicReadACL := flag.NewFlagSet("test", flag.PanicOnError)
+
+	args_empty := []string{
+		"-bucket=mybucket",
+	}
+	args_acl := []string{
+		"-bucket=mybucket",
+		"-acl=bucket-owner-full-control",
+	}
+	args_publicReadACL := []string{
+		"-bucket=mybucket",
+		"-public-access",
+	}
+
+	cfg_empty, _ := flagsToConfig(flags_empty)
+	cfg_acl, _ := flagsToConfig(flags_acl)
+	cfg_publicReadACL, _ := flagsToConfig(flags_publicReadACL)
+
+	flags_empty.Parse(args_empty)
+	flags_acl.Parse(args_acl)
+	flags_publicReadACL.Parse(args_publicReadACL)
+
+	check_err_empty := cfg_empty.check()
+	check_err_acl := cfg_acl.check()
+	check_err_publicReadACL := cfg_publicReadACL.check()
+
+	c.Assert(check_err_empty, qt.IsNil)
+	c.Assert(check_err_acl, qt.IsNil)
+	c.Assert(check_err_publicReadACL, qt.IsNil)
+
+	c.Assert(cfg_empty.getDefaultACL(), qt.Equals, "private")
+	c.Assert(cfg_acl.getDefaultACL(), qt.Equals, "bucket-owner-full-control")
+	c.Assert(cfg_publicReadACL.getDefaultACL(), qt.Equals, "public-read")
+}

@@ -73,6 +73,7 @@ type osFile struct {
 	f *memfile.File
 
 	route *route
+	acl   string
 }
 
 func (f *osFile) Key() string {
@@ -127,7 +128,7 @@ func (f *osFile) Headers() map[string]string {
 }
 
 func (f *osFile) ACL() string {
-	return f.route.ACL
+	return f.acl
 }
 
 func (f *osFile) initContentType(peek []byte) error {
@@ -179,7 +180,8 @@ func (f *osFile) shouldThisReplace(other file) (bool, uploadReason) {
 	return false, ""
 }
 
-func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInfo) (*osFile, error) {
+func newOSFile(conf fileConfig, targetRoot, relPath, absPath string, fi os.FileInfo) (*osFile, error) {
+	routes := conf.Routes
 	relPath = filepath.ToSlash(relPath)
 
 	file, err := os.Open(absPath)
@@ -213,7 +215,12 @@ func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInf
 		mFile = memfile.New(b)
 	}
 
-	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: absPath, relPath: relPath, size: size}
+	acl := conf.defaultACL
+	if route != nil && route.ACL != "" {
+		acl = route.ACL
+	}
+
+	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: absPath, relPath: relPath, size: size, acl: acl}
 
 	if err := of.initContentType(peek); err != nil {
 		return nil, err
@@ -238,6 +245,8 @@ func (r routes) get(path string) *route {
 // read config from .s3deploy.yml if found.
 type fileConfig struct {
 	Routes routes `yaml:"routes"`
+
+	defaultACL string
 }
 
 type route struct {

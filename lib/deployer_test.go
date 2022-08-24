@@ -338,8 +338,10 @@ func TestDeployOtherCannedACLProvided(t *testing.T) {
 
 	mainCss := m["main.css"]
 	indexHtml := m["index.html"]
+	yml := m[".s3deploy.yml"]                               // no route
 	c.Assert(mainCss.(*osFile).ACL(), qt.Equals, "private") // route-configured
 	c.Assert(indexHtml.(*osFile).ACL(), qt.Equals, "bucket-owner-full-control")
+	c.Assert(yml.(*osFile).ACL(), qt.Equals, "bucket-owner-full-control")
 }
 
 func TestDeployDeprecatedPublicReadACLFlagProvided(t *testing.T) {

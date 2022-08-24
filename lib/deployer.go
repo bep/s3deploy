@@ -284,7 +284,7 @@ func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFi
 			return nil
 		}
 
-		f, err := newOSFile(d.cfg.conf.Routes, d.cfg.BucketPath, rel, abs, info)
+		f, err := newOSFile(d.cfg.conf, d.cfg.BucketPath, rel, abs, info)
 		if err != nil {
 			return err
 		}
@@ -348,18 +348,10 @@ func (d *Deployer) loadConfig() error {
 		return err
 	}
 
-	acl := "private"
-	if d.cfg.ACL != "" {
-		acl = d.cfg.ACL
-	} else if d.cfg.PublicReadACL {
-		acl = "public-read"
-	}
+	acl := d.cfg.getDefaultACL()
+	conf.defaultACL = acl
 
 	for _, r := range conf.Routes {
-		if r.ACL == "" {
-			r.ACL = acl
-		}
-
 		r.routerRE, err = regexp.Compile(r.Route)
 
 		if err != nil {

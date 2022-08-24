@@ -28,6 +28,7 @@ func TestOSFile(t *testing.T) {
 	c.Assert(err, qt.IsNil)
 	c.Assert(string(b), qt.Equals, "ABC")
 	c.Assert(of.Headers()["Content-Type"], qt.Equals, "text/css; charset=utf-8")
+	c.Assert(of.ACL(), qt.Equals, "public-read")
 }
 
 func TestShouldThisReplace(t *testing.T) {
@@ -91,5 +92,5 @@ func openTestFile(name string) (*osFile, error) {
 		return nil, err
 	}
 
-	return newOSFile(nil, "", relPath, absPath, fi)
+	return newOSFile(fileConfig{defaultACL: "public-read"}, "", relPath, absPath, fi)
 }
