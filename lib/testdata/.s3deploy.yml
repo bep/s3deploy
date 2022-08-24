@@ -4,7 +4,6 @@ routes:
       headers:
          Cache-Control: "max-age=630720000, no-transform, public"
       gzip: true
-      acl: private
     - route: "^.+\\.(png|jpg)$"
       headers:
          Cache-Control: "max-age=630720000, no-transform, public"
