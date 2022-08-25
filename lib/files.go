@@ -73,7 +73,6 @@ type osFile struct {
 	f *memfile.File
 
 	route *route
-	acl   string
 }
 
 func (f *osFile) Key() string {
@@ -112,31 +111,25 @@ func (f *osFile) Headers() map[string]string {
 		"Content-Type": f.contentType,
 	}
 
-	if f.route != nil {
-		if f.route.Gzip {
-			headers["Content-Encoding"] = "gzip"
-		}
+	if f.route.Gzip {
+		headers["Content-Encoding"] = "gzip"
+	}
 
-		if f.route.Headers != nil {
-			for k, v := range f.route.Headers {
-				headers[k] = v
-			}
-		}
+	for k, v := range f.route.Headers {
+		headers[k] = v
 	}
 
 	return headers
 }
 
 func (f *osFile) ACL() string {
-	return f.acl
+	return f.route.ACL
 }
 
 func (f *osFile) initContentType(peek []byte) error {
-	if f.route != nil {
-		if contentType, found := f.route.Headers["Content-Type"]; found {
-			f.contentType = contentType
-			return nil
-		}
+	if contentType, found := f.route.Headers["Content-Type"]; found {
+		f.contentType = contentType
+		return nil
 	}
 
 	contentType := mime.TypeByExtension(filepath.Ext(f.relPath))
@@ -180,8 +173,7 @@ func (f *osFile) shouldThisReplace(other file) (bool, uploadReason) {
 	return false, ""
 }
 
-func newOSFile(conf fileConfig, targetRoot, relPath, absPath string, fi os.FileInfo) (*osFile, error) {
-	routes := conf.Routes
+func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInfo, defaultRoute *route) (*osFile, error) {
 	relPath = filepath.ToSlash(relPath)
 
 	file, err := os.Open(absPath)
@@ -196,9 +188,9 @@ func newOSFile(conf fileConfig, targetRoot, relPath, absPath string, fi os.FileI
 		peek  []byte
 	)
 
-	route := routes.get(relPath)
+	route := routes.get(relPath, defaultRoute)
 
-	if route != nil && route.Gzip {
+	if route.Gzip {
 		var b bytes.Buffer
 		gz := gzip.NewWriter(&b)
 		io.Copy(gz, file)
@@ -215,12 +207,7 @@ func newOSFile(conf fileConfig, targetRoot, relPath, absPath string, fi os.FileI
 		mFile = memfile.New(b)
 	}
 
-	acl := conf.defaultACL
-	if route != nil && route.ACL != "" {
-		acl = route.ACL
-	}
-
-	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: absPath, relPath: relPath, size: size, acl: acl}
+	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: absPath, relPath: relPath, size: size}
 
 	if err := of.initContentType(peek); err != nil {
 		return nil, err
@@ -231,7 +218,7 @@ func newOSFile(conf fileConfig, targetRoot, relPath, absPath string, fi os.FileI
 
 type routes []*route
 
-func (r routes) get(path string) *route {
+func (r routes) get(path string, defaultRoute *route) *route {
 	for _, route := range r {
 		if route.routerRE.MatchString(path) {
 			return route
@@ -239,14 +226,12 @@ func (r routes) get(path string) *route {
 	}
 
 	// no route found
-	return nil
+	return defaultRoute
 }
 
 // read config from .s3deploy.yml if found.
 type fileConfig struct {
 	Routes routes `yaml:"routes"`
-
-	defaultACL string
 }
 
 type route struct {

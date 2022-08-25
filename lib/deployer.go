@@ -284,7 +284,8 @@ func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFi
 			return nil
 		}
 
-		f, err := newOSFile(d.cfg.conf, d.cfg.BucketPath, rel, abs, info)
+		defaultRoute := d.cfg.getDefaultRoute()
+		f, err := newOSFile(d.cfg.conf.Routes, d.cfg.BucketPath, rel, abs, info, &defaultRoute)
 		if err != nil {
 			return err
 		}
@@ -348,10 +349,13 @@ func (d *Deployer) loadConfig() error {
 		return err
 	}
 
-	acl := d.cfg.getDefaultACL()
-	conf.defaultACL = acl
+	defaultACL := d.cfg.getDefaultACL()
 
 	for _, r := range conf.Routes {
+		if r.ACL == "" {
+			r.ACL = defaultACL
+		}
+
 		r.routerRE, err = regexp.Compile(r.Route)
 
 		if err != nil {

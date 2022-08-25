@@ -92,5 +92,8 @@ func openTestFile(name string) (*osFile, error) {
 		return nil, err
 	}
 
-	return newOSFile(fileConfig{defaultACL: "public-read"}, "", relPath, absPath, fi)
+	defaultRoute := &route{
+		ACL: "public-read",
+	}
+	return newOSFile(nil, "", relPath, absPath, fi, defaultRoute)
 }

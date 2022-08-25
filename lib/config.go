@@ -166,3 +166,13 @@ func (cfg *Config) getDefaultACL() string {
 	}
 	return acl
 }
+
+func (cfg *Config) getDefaultRoute() route {
+	return route{
+		Route:   "",
+		Headers: map[string]string{},
+		Gzip:    false,
+		Ignore:  false,
+		ACL:     cfg.getDefaultACL(),
+	}
+}
