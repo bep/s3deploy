@@ -1,4 +1,4 @@
-// Copyright © 2018 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -26,7 +26,7 @@ func TestChunkStrings(t *testing.T) {
 func TestNoUpdateStore(t *testing.T) {
 	store := new(noUpdateStore)
 	c := qt.New(t)
-	m, err := store.FileMap()
+	m, err := store.FileMap(context.Background())
 	c.Assert(err, qt.IsNil)
 	c.Assert(len(m), qt.Equals, 0)
 	c.Assert(store.DeleteObjects(context.Background(), nil), qt.IsNil)

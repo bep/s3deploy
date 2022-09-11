@@ -111,6 +111,8 @@ routes:
       gzip: true
 ```
 
+Note that the list of [system-defined metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#object-metadata) that S3 currently supports and returns as HTTP headers when hosting  a static site is very short. If you have more advanced requirements (e.g. security headers), see [this comment](https://github.com/bep/s3deploy/issues/57#issuecomment-991782098).
+
 
 ## Example IAM Policy
 

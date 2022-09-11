@@ -1,4 +1,4 @@
-// Copyright © 2018 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -48,6 +48,8 @@ type localFile interface {
 	// Content returns the content to be stored remotely. If this file
 	// configured to be gzipped, then that is what you get.
 	Content() io.ReadSeeker
+
+	ContentType() string
 
 	Headers() map[string]string
 }
@@ -100,15 +102,17 @@ func (f *osFile) Size() int64 {
 	return f.size
 }
 
+func (f *osFile) ContentType() string {
+	return f.contentType
+}
+
 func (f *osFile) Content() io.ReadSeeker {
 	f.f.Seek(0, 0)
 	return f.f
 }
 
 func (f *osFile) Headers() map[string]string {
-	headers := map[string]string{
-		"Content-Type": f.contentType,
-	}
+	headers := map[string]string{}
 
 	if f.route != nil {
 		if f.route.Gzip {

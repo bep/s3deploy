@@ -1,4 +1,4 @@
-// Copyright © 2018 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -27,7 +27,7 @@ func TestOSFile(t *testing.T) {
 	b, err := ioutil.ReadAll(of.Content())
 	c.Assert(err, qt.IsNil)
 	c.Assert(string(b), qt.Equals, "ABC")
-	c.Assert(of.Headers()["Content-Type"], qt.Equals, "text/css; charset=utf-8")
+	c.Assert(of.ContentType(), qt.Equals, "text/css; charset=utf-8")
 }
 
 func TestShouldThisReplace(t *testing.T) {

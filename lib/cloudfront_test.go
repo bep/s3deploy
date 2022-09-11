@@ -1,4 +1,4 @@
-// Copyright © 2018 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -6,12 +6,15 @@
 package lib
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
+	"github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
 	qt "github.com/frankban/quicktest"
 )
 
@@ -95,12 +98,15 @@ func TestPathsToInvalidationBatch(t *testing.T) {
 
 func TestNewCloudFrontClient(t *testing.T) {
 	c := qt.New(t)
-	s := mock.Session
-	client, err := newCloudFrontClient(s, newPrinter(ioutil.Discard), Config{
-		CDNDistributionIDs: Strings{"12345"},
-		Force:              true,
-		BucketPath:         "/mypath",
-	})
+	client, err := newCloudFrontClient(
+		&mockCloudfrontHandler{},
+		newPrinter(ioutil.Discard),
+		Config{
+			CDNDistributionIDs: Strings{"12345"},
+			Force:              true,
+			BucketPath:         "/mypath",
+		},
+	)
 	c.Assert(err, qt.IsNil)
 	c.Assert(client, qt.IsNotNil)
 	c.Assert(client.distributionIDs[0], qt.Equals, "12345")
@@ -120,4 +126,18 @@ func createFiles(root string, differentFolders bool, num int) []string {
 	}
 
 	return files
+}
+
+type mockCloudfrontHandler struct{}
+
+func (c *mockCloudfrontHandler) GetDistribution(ctx context.Context, params *cloudfront.GetDistributionInput, optFns ...func(*cloudfront.Options)) (*cloudfront.GetDistributionOutput, error) {
+	return &cloudfront.GetDistributionOutput{
+		Distribution: &types.Distribution{
+			DomainName: aws.String("example.com"),
+		},
+	}, nil
+}
+
+func (c *mockCloudfrontHandler) CreateInvalidation(ctx context.Context, params *cloudfront.CreateInvalidationInput, optFns ...func(*cloudfront.Options)) (*cloudfront.CreateInvalidationOutput, error) {
+	return &cloudfront.CreateInvalidationOutput{}, nil
 }
