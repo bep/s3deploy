@@ -1,4 +1,4 @@
-// Copyright © 2018 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -44,9 +44,9 @@ func TestDeploy(t *testing.T) {
 	assertKeys(t, m, ".s3deploy.yml", "main.css", "index.html", "ab.txt")
 
 	mainCss := m["main.css"]
+	c.Assert(mainCss.(*osFile).ContentType(), qt.Equals, "text/css; charset=utf-8")
 	headers := mainCss.(*osFile).Headers()
 	c.Assert(headers["Content-Encoding"], qt.Equals, "gzip")
-	c.Assert(headers["Content-Type"], qt.Equals, "text/css; charset=utf-8")
 	c.Assert(headers["Cache-Control"], qt.Equals, "max-age=630720000, no-transform, public")
 }
 
@@ -303,7 +303,6 @@ func newTestStoreFrom(m map[string]file, failAt int) remoteStore {
 type testStore struct {
 	failAt int
 	m      map[string]file
-	remote map[string]file
 
 	sync.Mutex
 }
@@ -321,7 +320,7 @@ func assertKeys(t *testing.T, m map[string]file, keys ...string) {
 	}
 }
 
-func (s *testStore) FileMap(opts ...opOption) (map[string]file, error) {
+func (s *testStore) FileMap(ctx context.Context, opts ...opOption) (map[string]file, error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -359,6 +358,6 @@ func (s *testStore) DeleteObjects(ctx context.Context, keys []string, opts ...op
 	return nil
 }
 
-func (s *testStore) Finalize() error {
+func (s *testStore) Finalize(ctx context.Context) error {
 	return nil
 }

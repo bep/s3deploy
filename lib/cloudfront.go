@@ -1,4 +1,4 @@
-// Copyright © 2018 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -6,16 +6,15 @@
 package lib
 
 import (
+	"context"
 	"errors"
 	"path"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudfront"
+	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
+	"github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
 )
 
 var _ remoteCDN = (*cloudFrontClient)(nil)
@@ -29,11 +28,11 @@ type cloudFrontClient struct {
 	bucketPath string
 
 	logger printer
-	cf     *cloudfront.CloudFront
+	cf     cloudfrontHandler
 }
 
 func newCloudFrontClient(
-	sess *session.Session,
+	handler cloudfrontHandler,
 	logger printer,
 	cfg Config,
 ) (*cloudFrontClient, error) {
@@ -45,17 +44,22 @@ func newCloudFrontClient(
 		force:           cfg.Force,
 		bucketPath:      cfg.BucketPath,
 		logger:          logger,
-		cf:              cloudfront.New(sess),
+		cf:              handler,
 	}, nil
 }
 
-func (c *cloudFrontClient) InvalidateCDNCache(paths ...string) error {
+type cloudfrontHandler interface {
+	GetDistribution(ctx context.Context, params *cloudfront.GetDistributionInput, optFns ...func(*cloudfront.Options)) (*cloudfront.GetDistributionOutput, error)
+	CreateInvalidation(ctx context.Context, params *cloudfront.CreateInvalidationInput, optFns ...func(*cloudfront.Options)) (*cloudfront.CreateInvalidationOutput, error)
+}
+
+func (c *cloudFrontClient) InvalidateCDNCache(ctx context.Context, paths ...string) error {
 	if len(paths) == 0 {
 		return nil
 	}
 
 	invalidateForID := func(id string) error {
-		dcfg, err := c.cf.GetDistribution(&cloudfront.GetDistributionInput{
+		dcfg, err := c.cf.GetDistribution(ctx, &cloudfront.GetDistributionInput{
 			Id: &id,
 		})
 		if err != nil {
@@ -92,6 +96,7 @@ func (c *cloudFrontClient) InvalidateCDNCache(paths ...string) error {
 		}
 
 		_, err = c.cf.CreateInvalidation(
+			ctx,
 			in,
 		)
 
@@ -107,19 +112,19 @@ func (c *cloudFrontClient) InvalidateCDNCache(paths ...string) error {
 	return nil
 }
 
-func (*cloudFrontClient) pathsToInvalidationBatch(ref string, paths ...string) *cloudfront.InvalidationBatch {
-	batch := &cloudfront.InvalidationBatch{
-		CallerReference: &ref,
-	}
-	cfpaths := &cloudfront.Paths{}
+func (*cloudFrontClient) pathsToInvalidationBatch(ref string, paths ...string) *types.InvalidationBatch {
+	cfpaths := &types.Paths{}
 	for _, p := range paths {
-		cfpaths.Items = append(cfpaths.Items, aws.String(pathEscapeRFC1738(p)))
+		cfpaths.Items = append(cfpaths.Items, pathEscapeRFC1738(p))
 	}
 
-	qty := int64(len(paths))
+	qty := int32(len(paths))
 	cfpaths.Quantity = &qty
-	batch.SetPaths(cfpaths)
-	return batch
+
+	return &types.InvalidationBatch{
+		CallerReference: &ref,
+		Paths:           cfpaths,
+	}
 }
 
 // determineRootAndSubPath takes the bucketPath, as set as a flag,

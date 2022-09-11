@@ -1,4 +1,4 @@
-// Copyright © 2018 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -9,52 +9,38 @@ import (
 	"errors"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 )
 
-func newSession(cfg Config) (*session.Session, error) {
+func newAWSConfig(cfg Config) (aws.Config, error) {
 	creds, err := createCredentials(cfg)
 	if err != nil {
-		return nil, err
+		return aws.Config{}, err
 	}
 
-	region := new(string)
-
-	if cfg.RegionName != "" {
-		region = &cfg.RegionName
-	}
-
-	return session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			// The region may be set in global config. See SharedConfigState.
-			Region: region,
-
-			// The credentials object to use when signing requests.
-			// Uses -key and -secret from command line if provided.
-			// Defaults to a chain of credential providers to search for
-			// credentials in environment variables, shared credential file,
-			// and EC2 Instance Roles.
-			Credentials: creds,
-		},
-		// This is the default in session.NewSession, but let us be explicit.
-		// The end user can override this with AWS_SDK_LOAD_CONFIG=1.
-		// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#hdr-Sessions_from_Shared_Config
-		SharedConfigState: session.SharedConfigStateFromEnv,
-	})
+	return aws.Config{
+		Region:      cfg.RegionName,
+		Credentials: creds,
+	}, nil
 }
 
-func createCredentials(cfg Config) (*credentials.Credentials, error) {
+func createCredentials(cfg Config) (aws.CredentialsProvider, error) {
 	accessKey, secretKey := cfg.AccessKey, cfg.SecretKey
 
 	if accessKey != "" && secretKey != "" {
-		return credentials.NewStaticCredentials(accessKey, secretKey, os.Getenv("AWS_SESSION_TOKEN")), nil
+		return credentials.NewStaticCredentialsProvider(accessKey, secretKey, os.Getenv("AWS_SESSION_TOKEN")), nil
 	}
 
 	if accessKey != "" || secretKey != "" {
 		// provided one but not both
 		return nil, errors.New("AWS key and secret are required")
+	}
+
+	// This seem to be a bug in https://github.com/aws/aws-sdk-go-v2
+	// It should be possible to use the default credentials provider chain.
+	if os.Getenv("AWS_ACCESS_KEY_ID") != "" {
+		return credentials.NewStaticCredentialsProvider(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), os.Getenv("AWS_SESSION_TOKEN")), nil
 	}
 
 	// Use AWS default

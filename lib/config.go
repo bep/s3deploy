@@ -1,4 +1,4 @@
-// Copyright © 2018 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -140,7 +140,6 @@ func (cfg *Config) shouldIgnoreLocal(key string) bool {
 }
 
 func (cfg *Config) shouldIgnoreRemote(key string) bool {
-
 	sub := key[len(cfg.BucketPath):]
 	sub = strings.TrimPrefix(sub, "/")
 

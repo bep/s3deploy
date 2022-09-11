@@ -1,4 +1,4 @@
-// Copyright © 2018 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -45,11 +45,6 @@ type Deployer struct {
 	store remoteStore
 }
 
-type upload struct {
-	*osFile
-	reason string
-}
-
 // Deploy deploys to the remote based on the given config.
 func Deploy(cfg *Config) (DeployStats, error) {
 	if err := cfg.check(); err != nil {
@@ -91,7 +86,7 @@ func Deploy(cfg *Config) (DeployStats, error) {
 	// load additional config from file if it exists
 	err := d.loadConfig()
 	if err != nil {
-		return *d.stats, fmt.Errorf("Failed to load config from %s: %s", cfg.ConfigFile, err)
+		return *d.stats, fmt.Errorf("failed to load config from %s: %s", cfg.ConfigFile, err)
 	}
 
 	baseStore := d.cfg.baseStore
@@ -135,7 +130,7 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		withMaxDelete(d.cfg.MaxDelete))
 
 	if err == nil {
-		err = d.store.Finalize()
+		err = d.store.Finalize(context.Background())
 	}
 
 	return *d.stats, err
@@ -162,6 +157,10 @@ func (p print) Printf(format string, a ...interface{}) (n int, err error) {
 	return fmt.Fprintf(p.out, format, a...)
 }
 
+func (d *Deployer) printf(format string, a ...interface{}) {
+	fmt.Fprintf(d.outv, format, a...)
+}
+
 func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile) {
 	d.Printf("%s (%s) %s ", f.relPath, f.reason, up)
 	select {
@@ -171,12 +170,12 @@ func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile) {
 }
 
 func (d *Deployer) skipFile(f *osFile) {
-	fmt.Fprintf(d.outv, "%s skipping …\n", f.relPath)
+	d.printf("%s skipping …\n", f.relPath)
 	atomic.AddUint64(&d.stats.Skipped, uint64(1))
 }
 
 func (d *Deployer) enqueueDelete(key string) {
-	fmt.Fprintf(d.outv, "%s not found in source, deleting.\n", key)
+	d.printf("%s not found in source, deleting.\n", key)
 	d.filesToDelete = append(d.filesToDelete, key)
 }
 
@@ -191,10 +190,11 @@ const (
 
 // plan figures out which files need to be uploaded.
 func (d *Deployer) plan(ctx context.Context) error {
-	remoteFiles, err := d.store.FileMap()
+	remoteFiles, err := d.store.FileMap(ctx)
 	if err != nil {
 		return err
 	}
+	d.printf("Found %d remote files\n", len(remoteFiles))
 
 	// All local files at sourcePath
 	localFiles := make(chan *osFile)
@@ -237,7 +237,7 @@ func (d *Deployer) plan(ctx context.Context) error {
 	// except for ignored files
 	for key := range remoteFiles {
 		if d.cfg.shouldIgnoreRemote(key) {
-			fmt.Fprintf(d.outv, "%s ignored …\n", key)
+			d.printf("%s ignored …\n", key)
 			continue
 		}
 		d.enqueueDelete(key)
