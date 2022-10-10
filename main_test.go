@@ -31,13 +31,7 @@ func TestIntegration(t *testing.T) {
 		Dir: "testscripts",
 		//UpdateScripts: true,
 		Setup: func(env *testscript.Env) error {
-			env.Setenv("S3DEPLOY_TEST_KEY", os.Getenv("S3DEPLOY_TEST_KEY"))
-			env.Setenv("S3DEPLOY_TEST_SECRET", os.Getenv("S3DEPLOY_TEST_SECRET"))
-			env.Setenv("S3DEPLOY_TEST_BUCKET", "s3deployintegrationtest")
-			env.Setenv("S3DEPLOY_TEST_REGION", "eu-north-1")
-			env.Setenv("S3DEPLOY_TEST_URL", s3IntegrationTestHttpRoot)
-			env.Setenv("S3DEPLOY_TEST_ID", strings.ToLower(ulid.Make().String()))
-			return nil
+			return setup(env)
 		},
 	})
 }
@@ -52,7 +46,9 @@ func TestUnfinished(t *testing.T) {
 		Dir: "testscripts/unfinished",
 		//TestWork: true,
 		//UpdateScripts: true,
-
+		Setup: func(env *testscript.Env) error {
+			return setup(env)
+		},
 	})
 }
 
@@ -61,7 +57,7 @@ func TestMain(m *testing.M) {
 		testscript.RunMain(m, map[string]func() int{
 			// The main program.
 			"s3deploy": func() int {
-				if err := parseAndRun(); err != nil {
+				if err := parseAndRun(os.Args[1:]); err != nil {
 					fmt.Fprintln(os.Stderr, err)
 					return 1
 				}
@@ -145,6 +141,20 @@ func TestMain(m *testing.M) {
 				time.Sleep(time.Duration(i) * time.Second)
 				return 0
 			},
+			"unset": func() int {
+				os.Unsetenv(os.Args[1])
+				return 0
+			},
 		}),
 	)
+}
+
+func setup(env *testscript.Env) error {
+	env.Setenv("S3DEPLOY_TEST_KEY", os.Getenv("S3DEPLOY_TEST_KEY"))
+	env.Setenv("S3DEPLOY_TEST_SECRET", os.Getenv("S3DEPLOY_TEST_SECRET"))
+	env.Setenv("S3DEPLOY_TEST_BUCKET", "s3deployintegrationtest")
+	env.Setenv("S3DEPLOY_TEST_REGION", "eu-north-1")
+	env.Setenv("S3DEPLOY_TEST_URL", s3IntegrationTestHttpRoot)
+	env.Setenv("S3DEPLOY_TEST_ID", strings.ToLower(ulid.Make().String()))
+	return nil
 }

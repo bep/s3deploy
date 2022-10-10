@@ -8,6 +8,18 @@
 
 A simple tool to deploy static websites to Amazon S3 and CloudFront with Gzip and custom headers support (e.g. "Cache-Control"). It uses ETag hashes to check if a file has changed, which makes it optimal in combination with static site generators like [Hugo](https://github.com/gohugoio/hugo).
 
+ * [Install](#install)
+ * [Configuration](#configuration)
+     * [Flags](#flags)
+     * [Routes](#routes)
+ * [Global AWS Configuration](#global-aws-configuration)
+ * [Example IAM Policy](#example-iam-policy)
+ * [CloudFront CDN Cache Invalidation](#cloudfront-cdn-cache-invalidation)
+     * [Example IAM Policy With CloudFront Config](#example-iam-policy-with-cloudfront-config)
+ * [Background Information](#background-information)
+ * [Alternatives](#alternatives)
+ * [Stargazers over time](#stargazers-over-time)
+
 ## Install
 
 Pre-built binaries can be found [here](https://github.com/bep/s3deploy/releases/latest).
@@ -26,75 +38,76 @@ Pre-built binaries can be found [here](https://github.com/bep/s3deploy/releases/
 
 Note that `s3deploy` is a perfect tool to use with a continuous integration tool such as [CircleCI](https://circleci.com/). See [this](https://mostlygeek.com/posts/hugo-circle-s3-hosting/) for a tutorial that uses s3deploy with CircleCI.
 
-## Use
+## Configuration
 
-```bash
-  -V	print version and exit
-  -acl string
-    	provide an ACL for uploaded objects. to make objects public, set to 'public-read'. all possible values are listed here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl (default "private")
-  -bucket string
-    	destination bucket name on AWS
-  -config string
-    	optional config file (default ".s3deploy.yml")
-  -distribution-id value
-    	optional CDN distribution ID for cache invalidation, repeat flag for multiple distributions
-  -force
-    	upload even if the etags match
-  -h	help
-  -ignore string
-    	regexp pattern for ignoring files
-  -key string
-    	access key ID for AWS
-  -max-delete int
-    	maximum number of files to delete per deploy (default 256)
-  -path string
-    	optional bucket sub path
-  -public-access
-    	DEPRECATED: please set -acl='public-read'
-  -quiet
-    	enable silent mode
-  -region string
-    	name of AWS region
-  -secret string
-    	secret access key for AWS
-  -source string
-    	path of files to upload (default ".")
-  -try
-    	trial run, no remote updates
-  -v	enable verbose logging
-  -workers int
-    	number of workers to upload files (default -1)
+### Flags
+
+The list of flags from running `s3deploy -h`:
+
+```
+-V	print version and exit
+-acl string
+    provide an ACL for uploaded objects. to make objects public, set to 'public-read'. all possible values are listed here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl (default "private")
+-bucket string
+    destination bucket name on AWS
+-config string
+    optional config file (default ".s3deploy.yml")
+-distribution-id value
+    optional CDN distribution ID for cache invalidation, repeat flag for multiple distributions
+-force
+    upload even if the etags match
+-h	help
+-ignore string
+    regexp pattern for ignoring files
+-key string
+    access key ID for AWS
+-max-delete int
+    maximum number of files to delete per deploy (default 256)
+-path string
+    optional bucket sub path
+-public-access
+    DEPRECATED: please set -acl='public-read'
+-quiet
+    enable silent mode
+-region string
+    name of AWS region
+-secret string
+    secret access key for AWS
+-source string
+    path of files to upload (default ".")
+-try
+    trial run, no remote updates
+-v	enable verbose logging
+-workers int
+    number of workers to upload files (default -1)
 ```
 
-### Notes
+The flags can be set in one of (in that priority order):
 
-- The `key` and `secret` command flags can also be set with environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-- The `region` flag is the AWS API name for the region where your bucket resides. See the table below or the [AWS Regions](https://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region) documentation file for an up-to-date version.
+1. As a flag, e.g. `s3deploy -path public/`
+1. As an OS environment variable prefixed with `S3DEPLOY_`, e.g. `S3DEPLOY_PATH="public/"`.
+1. As a key/value in `.s3deploy.yml`, e.g. `path: "public/"`
 
-Bucket region | API value | Bucket region | API value
-------------- | --------- | ------------- | ----------
-Canada (Central) | `ca-central-1` | Asia Pacific (Mumbai) | `ap-south-1`
-US East (Ohio) | `us-east-2` | Asia Pacific (Seoul) | `ap-northeast-2`
-US East (N. Virginia) | `us-east-1` | Asia Pacific (Singapore) | `ap-southeast-1`
-US West (N. California) | `us-west-1` | Asia Pacific (Sydney) | `ap-southeast-2`
-US West (Oregon) | `us-west-2` | Asia Pacific (Tokyo) | `ap-northeast-1`
-EU (Frankfurt)  | `eu-central-1` | China (Beijing) | `cn-north-1`
-EU (Ireland) | `eu-west-1` | China (Ningxia) | `cn-northwest-1`
-EU (London) | `eu-west-2`
-EU (Paris) | `eu-west-3`
-South America (São Paulo) | `sa-east-1`
+Environment variable expressions in `.s3deploy.yml` on the form `${VAR}` will be expanded before it's parsed:
 
-## Global AWS Configuration
+```yaml
+path: "${MYVARS_PATH}"
+max-delete: "${MYVARS_MAX_DELETE@U}"
+```
 
-See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#hdr-Sessions_from_Shared_Config
+Note the special `@U` (_Unquoute_) syntax for the int field.
 
-The `AWS SDK` will fall back to credentials from `~/.aws/credentials`.
+### Routes
 
-If you set the `AWS_SDK_LOAD_CONFIG` enviroment variable, it will also load shared config from `~/.aws/config` where you can set the global `region` to use if not provided etc.
+The `.s3deploy.yml` configuration file can also contain one or more routes. A route matches files given a regexp. Each route can apply:
 
-## Advanced Configuration
+headers
+: Header values, the most notable is probably `Cache-Control`. Note that the list of [system-defined metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#object-metadata) that S3 currently supports and returns as HTTP headers when hosting  a static site is very short. If you have more advanced requirements (e.g. security headers), see [this comment](https://github.com/bep/s3deploy/issues/57#issuecomment-991782098).
 
-Add a `.s3deploy.yml` configuration file in the root of your site. Example configuration:
+gzip
+: Set to true to gzip the content when stored in S3. This will also set the correct `Content-Encoding` when fetching the object from S3.
+
+Example:
 
 ```yaml
 routes:
@@ -111,8 +124,16 @@ routes:
       gzip: true
 ```
 
-Note that the list of [system-defined metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#object-metadata) that S3 currently supports and returns as HTTP headers when hosting  a static site is very short. If you have more advanced requirements (e.g. security headers), see [this comment](https://github.com/bep/s3deploy/issues/57#issuecomment-991782098).
 
+
+
+## Global AWS Configuration
+
+See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#hdr-Sessions_from_Shared_Config
+
+The `AWS SDK` will fall back to credentials from `~/.aws/credentials`.
+
+If you set the `AWS_SDK_LOAD_CONFIG` enviroment variable, it will also load shared config from `~/.aws/config` where you can set the global `region` to use if not provided etc.
 
 ## Example IAM Policy
 

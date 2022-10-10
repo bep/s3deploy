@@ -7,9 +7,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.18
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.20.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.27.9
+	github.com/bep/helpers v0.4.0
 	github.com/dsnet/golib v0.0.0-20171103203638-1ea166775780
 	github.com/frankban/quicktest v1.14.3
 	github.com/oklog/ulid/v2 v2.1.0
+	github.com/peterbourgon/ff/v3 v3.3.0
 	github.com/rogpeppe/go-internal v1.9.0
 	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f
 	golang.org/x/text v0.3.7

@@ -12,14 +12,42 @@ stderr 'InvalidAccessKeyId'
 
 # Only key.
 ! s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -key foo
-stderr 'AWS key and secret are required'
+stderr 'both AWS access key and secret key must be provided'
 
 # Print help.
 s3deploy -h
 stderr 'Usage of s3deploy'
 
+# Print help, flag from env.
+env S3DEPLOY_H=true
+s3deploy
+stderr 'Usage of s3deploy'
+env S3DEPLOY_H=''
+
+# Print help, flag from config file.
+s3deploy -config myconfig.yml
+stderr 'Usage of s3deploy'
+
+# Print version.
 s3deploy -V
 stdout 's3deploy \(devel\), commit none, built at unknown'
 
 s3deploy -V -quiet
 ! stdout .
+
+# Try
+env AWS_ACCESS_KEY_ID=$S3DEPLOY_TEST_KEY
+env AWS_SECRET_ACCESS_KEY=$S3DEPLOY_TEST_SECRET
+s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -try -acl 'public-read' -source=public/
+stdout 'This is a trial run'
+stdout 'Invalidate CDN: \[\w*/index.html \w*/styles.css\]'
+stdout 'Deleted 0 of 0, uploaded 2, skipped 0'
+
+-- public/index.html --
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Test</title></head><body><h1>Test</h1></body></html>
+-- public/styles.css --
+body { background: #fff; }
+
+-- myconfig.yml --
+# This isn't a very realistic use case, but it's possible ...
+h: true

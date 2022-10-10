@@ -101,7 +101,7 @@ func TestNewCloudFrontClient(t *testing.T) {
 	client, err := newCloudFrontClient(
 		&mockCloudfrontHandler{},
 		newPrinter(io.Discard),
-		Config{
+		&Config{
 			CDNDistributionIDs: Strings{"12345"},
 			Force:              true,
 			BucketPath:         "/mypath",

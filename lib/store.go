@@ -8,6 +8,7 @@ package lib
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 )
@@ -29,14 +30,14 @@ type remoteCDN interface {
 }
 
 type store struct {
-	cfg      Config
+	cfg      *Config
 	delegate remoteStore
 
 	changedKeys []string
 	changedMu   sync.Mutex
 }
 
-func newStore(cfg Config, s remoteStore) remoteStore {
+func newStore(cfg *Config, s remoteStore) remoteStore {
 	return &store{cfg: cfg, delegate: s}
 }
 
@@ -147,6 +148,7 @@ func (s *noUpdateStore) Finalize(ctx context.Context) error {
 }
 
 func (s *noUpdateStore) InvalidateCDNCache(ctx context.Context, paths ...string) error {
+	sort.Strings(paths)
 	fmt.Println("\nInvalidate CDN:", paths)
 	return nil
 }
