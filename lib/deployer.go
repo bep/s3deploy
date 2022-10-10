@@ -12,7 +12,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -20,8 +19,6 @@ import (
 
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/text/unicode/norm"
-
-	"gopkg.in/yaml.v2"
 )
 
 const up = `↑`
@@ -46,10 +43,9 @@ type Deployer struct {
 
 // Deploy deploys to the remote based on the given config.
 func Deploy(cfg *Config) (DeployStats, error) {
-	if err := cfg.check(); err != nil {
+	if err := cfg.Init(); err != nil {
 		return DeployStats{}, err
 	}
-
 	var outv, out io.Writer = io.Discard, os.Stdout
 	if cfg.Silent {
 		out = io.Discard
@@ -82,15 +78,10 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		numberOfWorkers = runtime.NumCPU()
 	}
 
-	// load additional config from file if it exists
-	err := d.loadConfig()
-	if err != nil {
-		return *d.stats, fmt.Errorf("failed to load config from %s: %s", cfg.ConfigFile, err)
-	}
-
 	baseStore := d.cfg.baseStore
 	if baseStore == nil {
-		baseStore, err = newRemoteStore(*d.cfg, d)
+		var err error
+		baseStore, err = newRemoteStore(d.cfg, d)
 		if err != nil {
 			return *d.stats, err
 		}
@@ -99,7 +90,7 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		baseStore = newNoUpdateStore(baseStore)
 		d.Println("This is a trial run, with no remote updates.")
 	}
-	d.store = newStore(*d.cfg, baseStore)
+	d.store = newStore(d.cfg, baseStore)
 
 	for i := 0; i < numberOfWorkers; i++ {
 		g.Go(func() error {
@@ -107,7 +98,7 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		})
 	}
 
-	err = d.plan(ctx)
+	err := d.plan(ctx)
 	if err != nil {
 		cancel()
 	}
@@ -283,7 +274,7 @@ func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFi
 			return nil
 		}
 
-		f, err := newOSFile(d.cfg.conf.Routes, d.cfg.BucketPath, rel, abs, info)
+		f, err := newOSFile(d.cfg.fileConf.Routes, d.cfg.BucketPath, rel, abs, info)
 		if err != nil {
 			return err
 		}
@@ -321,41 +312,4 @@ func (d *Deployer) upload(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
-}
-
-func (d *Deployer) loadConfig() error {
-	configFile := d.cfg.ConfigFile
-
-	if configFile == "" {
-		return nil
-	}
-
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		return nil
-	}
-
-	data, err := os.ReadFile(configFile)
-
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	conf := fileConfig{}
-
-	err = yaml.Unmarshal(data, &conf)
-	if err != nil {
-		return err
-	}
-
-	for _, r := range conf.Routes {
-		r.routerRE, err = regexp.Compile(r.Route)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	d.cfg.conf = conf
-
-	return nil
 }

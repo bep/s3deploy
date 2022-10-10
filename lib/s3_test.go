@@ -10,7 +10,7 @@ import (
 func TestNewRemoteStoreNoAclProvided(t *testing.T) {
 	c := qt.New(t)
 
-	cfg := Config{
+	cfg := &Config{
 		BucketName: "example.com",
 		RegionName: "us-east-1",
 		ACL:        "",
@@ -26,7 +26,7 @@ func TestNewRemoteStoreNoAclProvided(t *testing.T) {
 func TestNewRemoteStoreAclProvided(t *testing.T) {
 	c := qt.New(t)
 
-	cfg := Config{
+	cfg := &Config{
 		BucketName: "example.com",
 		RegionName: "us-east-1",
 		ACL:        "public-read",
@@ -42,7 +42,7 @@ func TestNewRemoteStoreAclProvided(t *testing.T) {
 func TestNewRemoteStoreOtherCannedAclProvided(t *testing.T) {
 	c := qt.New(t)
 
-	cfg := Config{
+	cfg := &Config{
 		BucketName: "example.com",
 		RegionName: "us-east-1",
 		ACL:        "bucket-owner-full-control",
@@ -58,7 +58,7 @@ func TestNewRemoteStoreOtherCannedAclProvided(t *testing.T) {
 func TestNewRemoteStoreDeprecatedPublicReadACLFlaglProvided(t *testing.T) {
 	c := qt.New(t)
 
-	cfg := Config{
+	cfg := &Config{
 		BucketName:    "example.com",
 		RegionName:    "us-east-1",
 		PublicReadACL: true,

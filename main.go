@@ -6,9 +6,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
+	"os"
 	"runtime/debug"
 
 	"github.com/bep/s3deploy/v2/lib"
@@ -23,20 +23,16 @@ var (
 func main() {
 	log.SetFlags(0)
 
-	// Use:
-	// s3deploy -source=public/ -bucket=example.com -region=eu-west-1 -key=$AWS_ACCESS_KEY_ID -secret=$AWS_SECRET_ACCESS_KEY
-	if err := parseAndRun(); err != nil {
+	if err := parseAndRun(os.Args[1:]); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func parseAndRun() error {
-	cfg, err := lib.FlagsToConfig()
+func parseAndRun(args []string) error {
+	cfg, err := lib.ConfigFromArgs(args)
 	if err != nil {
 		return err
 	}
-
-	flag.Parse()
 
 	initVersionInfo()
 
@@ -45,7 +41,7 @@ func parseAndRun() error {
 	}
 
 	if cfg.Help {
-		flag.Usage()
+		cfg.Usage()
 		return nil
 	}
 
@@ -67,6 +63,10 @@ func parseAndRun() error {
 }
 
 func initVersionInfo() {
+	if commit != "none" {
+		// Set by goreleaser.
+		return
+	}
 
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {

@@ -34,7 +34,7 @@ type cloudFrontClient struct {
 func newCloudFrontClient(
 	handler cloudfrontHandler,
 	logger printer,
-	cfg Config,
+	cfg *Config,
 ) (*cloudFrontClient, error) {
 	if len(cfg.CDNDistributionIDs) == 0 {
 		return nil, errors.New("must provide one or more distribution ID")

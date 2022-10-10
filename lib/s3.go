@@ -48,7 +48,7 @@ func (f *s3File) Size() int64 {
 	return f.o.Size
 }
 
-func newRemoteStore(cfg Config, logger printer) (*s3Store, error) {
+func newRemoteStore(cfg *Config, logger printer) (*s3Store, error) {
 	var s *s3Store
 	var cfc *cloudFrontClient
 
@@ -75,7 +75,7 @@ func newRemoteStore(cfg Config, logger printer) (*s3Store, error) {
 
 	client := s3.NewFromConfig(awsConfig)
 
-	s = &s3Store{svc: client, cfc: cfc, acl: acl, bucket: cfg.BucketName, r: cfg.conf.Routes, bucketPath: cfg.BucketPath}
+	s = &s3Store{svc: client, cfc: cfc, acl: acl, bucket: cfg.BucketName, r: cfg.fileConf.Routes, bucketPath: cfg.BucketPath}
 
 	return s, nil
 }
