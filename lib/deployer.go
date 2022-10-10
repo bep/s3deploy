@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -51,9 +50,9 @@ func Deploy(cfg *Config) (DeployStats, error) {
 		return DeployStats{}, err
 	}
 
-	var outv, out io.Writer = ioutil.Discard, os.Stdout
+	var outv, out io.Writer = io.Discard, os.Stdout
 	if cfg.Silent {
-		out = ioutil.Discard
+		out = io.Discard
 	} else {
 		if cfg.Verbose {
 			outv = os.Stdout
@@ -335,7 +334,7 @@ func (d *Deployer) loadConfig() error {
 		return nil
 	}
 
-	data, err := ioutil.ReadFile(configFile)
+	data, err := os.ReadFile(configFile)
 
 	if os.IsNotExist(err) {
 		return nil

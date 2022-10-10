@@ -37,8 +37,6 @@ func createCredentials(cfg Config) (aws.CredentialsProvider, error) {
 		return nil, errors.New("AWS key and secret are required")
 	}
 
-	// This seem to be a bug in https://github.com/aws/aws-sdk-go-v2
-	// It should be possible to use the default credentials provider chain.
 	if os.Getenv("AWS_ACCESS_KEY_ID") != "" {
 		return credentials.NewStaticCredentialsProvider(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), os.Getenv("AWS_SESSION_TOKEN")), nil
 	}

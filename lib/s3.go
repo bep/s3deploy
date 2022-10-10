@@ -165,7 +165,6 @@ func (s *s3Store) applyMetadataToPutObjectInput(input *s3.PutObjectInput, f loca
 		default:
 			input.Metadata[k] = v
 		}
-		input.Metadata[k] = v
 	}
 
 	return nil

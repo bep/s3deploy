@@ -12,7 +12,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"os"
@@ -205,7 +204,7 @@ func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInf
 		peek = make([]byte, 512)
 		file.Read(peek)
 	} else {
-		b, err := ioutil.ReadAll(file)
+		b, err := io.ReadAll(file)
 		if err != nil {
 			return nil, err
 		}
