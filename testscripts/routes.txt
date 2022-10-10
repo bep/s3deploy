@@ -1,0 +1,50 @@
+env AWS_ACCESS_KEY_ID=$S3DEPLOY_TEST_KEY
+env AWS_SECRET_ACCESS_KEY=$S3DEPLOY_TEST_SECRET
+
+s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -acl 'public-read' -source=public/
+
+stdout 'Deleted 0 of 0, uploaded 2, skipped 0.*100% changed'
+
+head /$S3DEPLOY_TEST_ID/
+stdout 'Head: /S3DEPLOY_TEST_ID/;Status: 200;Headers: Content-Disposition: inline;Content-Encoding: gzip;Content-Language: nn;Content-Length: 10\d;Content-Type: text/html; charset=utf-8;.*;Expires: Mon, 01 Dec 2098 16:00:00 GMT;'
+
+head /$S3DEPLOY_TEST_ID/styles.css
+stdout 'Head: /S3DEPLOY_TEST_ID/styles.css;Status: 200;Headers: Cache-Control: max-age=630720000, no-transform, public;Content-Encoding: gzip;Content-Length: 5\d;Content-Type: text/css; charset=utf-8;'
+
+# This is added as a system defined property.
+! stdout 'X-Amz-Meta-Content-Encoding: gzip'
+
+# Change 1 file and redeploy.
+append public/styles.css 'p { color: red; }'
+s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -acl 'public-read' -source=public/
+
+stdout 'styles.css \(size\)'
+stdout 'Deleted 0 of 0, uploaded 1, skipped 1.*50% changed'
+
+# Delete 1 file and redeploy.
+rm public/styles.css
+s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -acl 'public-read' -source=public/
+stdout  'Deleted 1 of 1, uploaded 0, skipped 1.*50% changed'
+
+-- public/index.html --
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Test</title></head><body><h1>Test</h1></body></html>
+-- public/styles.css --
+body { background: #fff; }
+
+-- .s3deploy.yml --
+routes:
+    - route: "^.+\\.(js|css|svg|ttf)$"
+      #  cache static assets for 20 years
+      headers:
+         Cache-Control: "max-age=630720000, no-transform, public"
+      gzip: true
+    - route: "^.+\\.(png|jpg)$"
+      headers:
+         Cache-Control: "max-age=630720000, no-transform, public"
+      gzip: false
+    - route: "^.+\\.(html|xml|json)$"
+      headers:
+        Content-Language: "nn"
+        Content-Disposition: "inline"
+        Expires: "Thu, 01 Dec 2098 16:00:00 GMT"
+      gzip: true

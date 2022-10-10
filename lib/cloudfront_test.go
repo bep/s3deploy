@@ -8,7 +8,7 @@ package lib
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"path"
 	"testing"
 
@@ -100,7 +100,7 @@ func TestNewCloudFrontClient(t *testing.T) {
 	c := qt.New(t)
 	client, err := newCloudFrontClient(
 		&mockCloudfrontHandler{},
-		newPrinter(ioutil.Discard),
+		newPrinter(io.Discard),
 		Config{
 			CDNDistributionIDs: Strings{"12345"},
 			Force:              true,

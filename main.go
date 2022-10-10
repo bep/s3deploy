@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"runtime/debug"
 
 	"github.com/bep/s3deploy/v2/lib"
 )
@@ -24,13 +25,20 @@ func main() {
 
 	// Use:
 	// s3deploy -source=public/ -bucket=example.com -region=eu-west-1 -key=$AWS_ACCESS_KEY_ID -secret=$AWS_SECRET_ACCESS_KEY
+	if err := parseAndRun(); err != nil {
+		log.Fatal(err)
+	}
+}
 
+func parseAndRun() error {
 	cfg, err := lib.FlagsToConfig()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	flag.Parse()
+
+	initVersionInfo()
 
 	if !cfg.Silent {
 		fmt.Printf("s3deploy %v, commit %v, built at %v\n", version, commit, date)
@@ -38,19 +46,44 @@ func main() {
 
 	if cfg.Help {
 		flag.Usage()
-		return
+		return nil
 	}
 
 	if cfg.PrintVersion {
-		return
+		return nil
 	}
 
 	stats, err := lib.Deploy(cfg)
 	if err != nil {
-		log.Fatal("error: ", err)
+		return err
 	}
 
 	if !cfg.Silent {
 		fmt.Println(stats.Summary())
 	}
+
+	return nil
+
+}
+
+func initVersionInfo() {
+
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+
+	version = bi.Main.Version
+
+	for _, s := range bi.Settings {
+		switch s.Key {
+		case "vcs":
+		case "vcs.revision":
+			commit = s.Value
+		case "vcs.time":
+			date = s.Value
+		case "vcs.modified":
+		}
+	}
+
 }

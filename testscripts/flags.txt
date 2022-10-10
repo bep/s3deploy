@@ -1,0 +1,25 @@
+# No flags.
+! s3deploy
+stderr 'AWS bucket is required'
+
+# Missing keys.
+! s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID
+stderr 'Access Denied'
+
+# Invalid keys.
+! s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -key foo -secret bar
+stderr 'InvalidAccessKeyId'
+
+# Only key.
+! s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -key foo
+stderr 'AWS key and secret are required'
+
+# Print help.
+s3deploy -h
+stderr 'Usage of s3deploy'
+
+s3deploy -V
+stdout 's3deploy \(devel\), commit none, built at unknown'
+
+s3deploy -V -quiet
+! stdout .

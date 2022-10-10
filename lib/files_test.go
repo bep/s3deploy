@@ -6,7 +6,7 @@
 package lib
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +24,7 @@ func TestOSFile(t *testing.T) {
 	c.Assert(of.Size(), qt.Equals, int64(3))
 	c.Assert(of.ETag(), qt.Equals, `"902fbdd2b1df0c4f70b4a5d23525e932"`)
 	c.Assert(of.Content(), qt.IsNotNil)
-	b, err := ioutil.ReadAll(of.Content())
+	b, err := io.ReadAll(of.Content())
 	c.Assert(err, qt.IsNil)
 	c.Assert(string(b), qt.Equals, "ABC")
 	c.Assert(of.ContentType(), qt.Equals, "text/css; charset=utf-8")
