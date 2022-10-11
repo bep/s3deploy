@@ -114,13 +114,13 @@ Example:
 ```yaml
 routes:
     - route: "^.+\\.(js|css|svg|ttf)$"
-      #  cache static assets for 20 years
+      #  cache static assets for 1 year.
       headers:
-         Cache-Control: "max-age=630720000, no-transform, public"
+         Cache-Control: "max-age=31536000, no-transform, public"
       gzip: true
     - route: "^.+\\.(png|jpg)$"
       headers:
-         Cache-Control: "max-age=630720000, no-transform, public"
+         Cache-Control: "max-age=31536000, no-transform, public"
       gzip: false
     - route: "^.+\\.(html|xml|json)$"
       gzip: true
