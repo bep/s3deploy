@@ -45,7 +45,7 @@ Note that `s3deploy` is a perfect tool to use with a continuous integration tool
 The list of flags from running `s3deploy -h`:
 
 ```
--V	print version and exit
+-V print version and exit
 -acl string
     provide an ACL for uploaded objects. to make objects public, set to 'public-read'. all possible values are listed here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl (default "private")
 -bucket string
@@ -82,11 +82,13 @@ The list of flags from running `s3deploy -h`:
     number of workers to upload files (default -1)
 ```
 
-The flags can be set in one of (in that priority order):
+The flags can be set in one of (in priority order):
 
 1. As a flag, e.g. `s3deploy -path public/`
 1. As an OS environment variable prefixed with `S3DEPLOY_`, e.g. `S3DEPLOY_PATH="public/"`.
 1. As a key/value in `.s3deploy.yml`, e.g. `path: "public/"`
+1. For `key` and `secret` resolution, the OS environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (and `AWS_SESSION_TOKEN`) will also be checked. This way you don't need to do any special to make it work with [AWS Vaule](https://github.com/99designs/aws-vault) and similar tools.
+	
 
 Environment variable expressions in `.s3deploy.yml` on the form `${VAR}` will be expanded before it's parsed:
 
@@ -101,10 +103,10 @@ Note the special `@U` (_Unquoute_) syntax for the int field.
 
 The `.s3deploy.yml` configuration file can also contain one or more routes. A route matches files given a regexp. Each route can apply:
 
-headers
+`header`
 : Header values, the most notable is probably `Cache-Control`. Note that the list of [system-defined metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html#object-metadata) that S3 currently supports and returns as HTTP headers when hosting  a static site is very short. If you have more advanced requirements (e.g. security headers), see [this comment](https://github.com/bep/s3deploy/issues/57#issuecomment-991782098).
 
-gzip
+`gzip`
 : Set to true to gzip the content when stored in S3. This will also set the correct `Content-Encoding` when fetching the object from S3.
 
 Example:
