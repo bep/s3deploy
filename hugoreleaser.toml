@@ -108,7 +108,7 @@ archive_alias_replacements = {}
     [[builds.os]]
         goos = "windows"
         [builds.os.build_settings]
-            binary = "hugo.exe"
+            binary = "s3deploy.exe"
         [[builds.os.archs]]
             goarch = "amd64"
 
