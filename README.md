@@ -35,6 +35,8 @@ Pre-built binaries can be found [here](https://github.com/bep/s3deploy/releases/
  ```bash
  brew install bep/tap/s3deploy
  ```
+ 
+**Note** The brew tap above currently stops at v2.8.1; see [this issue](https://github.com/bep/s3deploy/issues/312) for more info.
 
 Note that `s3deploy` is a perfect tool to use with a continuous integration tool such as [CircleCI](https://circleci.com/). See [this](https://mostlygeek.com/posts/hugo-circle-s3-hosting/) for a tutorial that uses s3deploy with CircleCI.
 
