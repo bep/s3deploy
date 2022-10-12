@@ -9,7 +9,6 @@ jobs:
       - run:
             command: |
                 go mod download
-                goreleaser
 workflows:
   version: 2
   release:
@@ -18,6 +17,6 @@ workflows:
             context: org-global
             filters:
               tags:
-                only: /v[0-9]+(\.[0-9]+)*(-.*)*/
+                only: /disabled-v[0-9]+(\.[0-9]+)*(-.*)*/
               branches:
                 ignore: /.*/
