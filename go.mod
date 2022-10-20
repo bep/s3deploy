@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.16.16
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.21
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.20.5
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.27.11
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.28.0
 	github.com/bep/helpers v0.4.0
 	github.com/dsnet/golib/memfile v1.0.0
 	github.com/frankban/quicktest v1.14.3
