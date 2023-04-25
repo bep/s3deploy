@@ -56,6 +56,8 @@ The list of flags from running `s3deploy -h`:
     optional config file (default ".s3deploy.yml")
 -distribution-id value
     optional CDN distribution ID for cache invalidation, repeat flag for multiple distributions
+-endpoint-url url
+	optional AWS endpoint URL override
 -force
     upload even if the etags match
 -h	help
