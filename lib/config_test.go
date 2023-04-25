@@ -27,6 +27,7 @@ func TestConfigFromArgs(t *testing.T) {
 		"-quiet=true",
 		"-region=myregion",
 		"-source=mysource",
+		"-endpoint-url=http://localhost:9000",
 		"-distribution-id=mydistro1",
 		"-distribution-id=mydistro2",
 		"-ignore=^ignored-prefix.*",
@@ -46,6 +47,7 @@ func TestConfigFromArgs(t *testing.T) {
 	c.Assert(cfg.BucketPath, qt.Equals, "mypath")
 	c.Assert(cfg.Silent, qt.Equals, true)
 	c.Assert(cfg.SourcePath, qt.Equals, "mysource")
+	c.Assert(cfg.EndpointURL, qt.Equals, "http://localhost:9000")
 	c.Assert(cfg.Try, qt.Equals, true)
 	c.Assert(cfg.RegionName, qt.Equals, "myregion")
 	c.Assert(cfg.CDNDistributionIDs, qt.DeepEquals, Strings{"mydistro1", "mydistro2"})

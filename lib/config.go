@@ -64,6 +64,9 @@ type Config struct {
 	// When set, will invalidate the CDN cache(s) for the updated files.
 	CDNDistributionIDs Strings
 
+	// When set, will override the default AWS endpoint.
+	EndpointURL string
+
 	// Optional configFile
 	ConfigFile string
 
@@ -244,6 +247,7 @@ func flagsToConfig(f *flag.FlagSet) *Config {
 	f.StringVar(&cfg.BucketPath, "path", "", "optional bucket sub path")
 	f.StringVar(&cfg.SourcePath, "source", ".", "path of files to upload")
 	f.Var(&cfg.CDNDistributionIDs, "distribution-id", "optional CDN distribution ID for cache invalidation, repeat flag for multiple distributions")
+	f.StringVar(&cfg.EndpointURL, "endpoint-url", "", "optional endpoint URL")
 	f.StringVar(&cfg.ConfigFile, "config", ".s3deploy.yml", "optional config file")
 	f.IntVar(&cfg.MaxDelete, "max-delete", 256, "maximum number of files to delete per deploy")
 	f.BoolVar(&cfg.PublicReadACL, "public-access", false, "DEPRECATED: please set -acl='public-read'")

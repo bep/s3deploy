@@ -13,10 +13,21 @@ import (
 )
 
 func newAWSConfig(cfg *Config) (aws.Config, error) {
-	return aws.Config{
+	config := aws.Config{
 		Region:      cfg.RegionName,
 		Credentials: createCredentials(cfg),
-	}, nil
+	}
+
+	if cfg.EndpointURL != "" {
+		resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				URL: cfg.EndpointURL,
+			}, nil
+		})
+		config.EndpointResolverWithOptions = resolver
+	}
+
+	return config, nil
 }
 
 func createCredentials(cfg *Config) aws.CredentialsProvider {
