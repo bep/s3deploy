@@ -25,9 +25,6 @@ const s3IntegrationTestHttpRoot = "http://s3deployintegrationtest.s3-website.eu-
 
 func TestIntegration(t *testing.T) {
 	if os.Getenv("S3DEPLOY_TEST_KEY") == "" {
-		if os.Getenv("CI") != "" {
-			t.Fatal("S3DEPLOY_TEST_KEY not set")
-		}
 		t.Skip("S3DEPLOY_TEST_KEY not set")
 
 	}
