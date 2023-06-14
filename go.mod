@@ -3,7 +3,7 @@ module github.com/bep/s3deploy/v2
 go 1.18
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.18.0
+	github.com/aws/aws-sdk-go-v2 v1.18.1
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.22
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.26.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.33.1
