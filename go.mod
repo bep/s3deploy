@@ -3,9 +3,9 @@ module github.com/bep/s3deploy/v2
 go 1.18
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.18.1
+	github.com/aws/aws-sdk-go-v2 v1.19.1
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.22
-	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.26.7
+	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.26.10
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.35.0
 	github.com/bep/helpers v0.4.0
 	github.com/dsnet/golib/memfile v1.0.0
@@ -20,8 +20,8 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.34 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.28 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.36 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.26 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.1.29 // indirect
