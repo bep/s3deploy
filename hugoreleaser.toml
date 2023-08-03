@@ -4,7 +4,7 @@ project = "s3deploy"
 # which contains the string on the left, e.g.
 #  { "linux-64bit" = "linux-amd64" }.
 #
-# The common use case is to to preserve some backward compability on name changes,
+# The common use case is to to preserve some backward compatibility on name changes,
 # the example above is taken from Hugo.
 # You can include any extension in the above to limit this to e.g. only .deb archives.
 archive_alias_replacements = {}
@@ -20,7 +20,7 @@ archive_alias_replacements = {}
     go_exe   = "go"
 
 # Build settings can be set on any of Project > Build > Goos > Goarch.
-# Zero values (empty strings, 0 numbers) and nil slices/maps wil inherit values from the nearest non-zero value above for a key.
+# Zero values (empty strings, 0 numbers) and nil slices/maps will inherit values from the nearest non-zero value above for a key.
 # Empty slices and maps will stay empty (e.g. `env = []`)
 [build_settings]
     binary  = "s3deploy"
@@ -63,7 +63,7 @@ archive_alias_replacements = {}
         # Will fall back to the default if not set.
         template_filename = ""
 
-        # Collapse relases with < 10 changes below one title.
+        # Collapse releases with < 10 changes below one title.
         short_threshold = 10
         short_title     = "What's Changed"
 

@@ -1,5 +1,6 @@
 # s3deploy
 
+[![Project status: active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![GoDoc](https://godoc.org/github.com/bep/s3deploy?status.svg)](https://godoc.org/github.com/bep/s3deploy)
 [![Test](https://github.com/bep/s3deploy/actions/workflows/test.yml/badge.svg)](https://github.com/bep/s3deploy/actions/workflows/test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bep/s3deploy)](https://goreportcard.com/report/github.com/bep/s3deploy)
@@ -91,7 +92,7 @@ The flags can be set in one of (in priority order):
 1. As a flag, e.g. `s3deploy -path public/`
 1. As an OS environment variable prefixed with `S3DEPLOY_`, e.g. `S3DEPLOY_PATH="public/"`.
 1. As a key/value in `.s3deploy.yml`, e.g. `path: "public/"`
-1. For `key` and `secret` resolution, the OS environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (and `AWS_SESSION_TOKEN`) will also be checked. This way you don't need to do any special to make it work with [AWS Vaule](https://github.com/99designs/aws-vault) and similar tools.
+1. For `key` and `secret` resolution, the OS environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (and `AWS_SESSION_TOKEN`) will also be checked. This way you don't need to do any special to make it work with [AWS Vault](https://github.com/99designs/aws-vault) and similar tools.
 	
 
 Environment variable expressions in `.s3deploy.yml` on the form `${VAR}` will be expanded before it's parsed:
@@ -139,7 +140,7 @@ See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#hdr-Sessions_from_Sh
 
 The `AWS SDK` will fall back to credentials from `~/.aws/credentials`.
 
-If you set the `AWS_SDK_LOAD_CONFIG` enviroment variable, it will also load shared config from `~/.aws/config` where you can set the global `region` to use if not provided etc.
+If you set the `AWS_SDK_LOAD_CONFIG` environment variable, it will also load shared config from `~/.aws/config` where you can set the global `region` to use if not provided etc.
 
 ## Example IAM Policy
 
@@ -213,7 +214,7 @@ Note that CloudFront allows [1,000 paths per month at no charge](https://aws.ama
 
 ## Background Information
 
-If you're looking at `s3deploy` then you've probably already seen the [`aws s3 sync` command](http://docs.aws.amazon.com/cli/latest/reference/s3/sync.html) - this command has a sync-strategy that is not optimised for static sites, it compares the **timestamp** and **size** of your files to decide whether to upload the file.
+If you're looking at `s3deploy` then you've probably already seen the [`aws s3 sync` command](https://docs.aws.amazon.com/cli/latest/reference/s3/sync.html) - this command has a sync-strategy that is not optimised for static sites, it compares the **timestamp** and **size** of your files to decide whether to upload the file.
 
 Because static-site generators can recreate **every** file (even if identical) the timestamp is updated and thus `aws s3 sync` will needlessly upload every single file. `s3deploy` on the other hand checks the etag hash to check for actual changes, and uses that instead.
 
