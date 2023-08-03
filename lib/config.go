@@ -187,7 +187,7 @@ func (cfg *Config) init() error {
 	}
 
 	if cfg.AccessKey == "" && cfg.SecretKey == "" {
-		// The AWS SDK will fall back to other ways of finding credentials, so we cannot throw ane error here; it will eventually fail.
+		// The AWS SDK will fall back to other ways of finding credentials, so we cannot throw an error here; it will eventually fail.
 	} else if cfg.AccessKey == "" || cfg.SecretKey == "" {
 		return errors.New("both AWS access key and secret key must be provided")
 	}
