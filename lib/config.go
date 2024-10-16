@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/bep/helpers/envhelpers"
+	"github.com/bep/predicate"
 	"github.com/peterbourgon/ff/v3"
 	"gopkg.in/yaml.v2"
 )
@@ -44,7 +45,6 @@ func ConfigFromArgs(args []string) (*Config, error) {
 	}
 
 	return cfg, nil
-
 }
 
 // Config configures a deployment.
@@ -78,8 +78,17 @@ type Config struct {
 	Silent          bool
 	Force           bool
 	Try             bool
-	Ignore          string
-	IgnoreRE        *regexp.Regexp // compiled version of Ignore
+	Ignore          Strings
+
+	// One or more regular expressions of files to ignore when walking the local directory.
+	// If not set, defaults to ".DS_Store".
+	// Note that the path given will have Unix separators, regardless of the OS.
+	SkipLocalFiles Strings
+
+	// A list of regular expressions of directories to ignore when walking the local directory.
+	// If not set, defaults to ignoring hidden directories.
+	// Note that the path given will have Unix separators, regardless of the OS.
+	SkipLocalDirs Strings
 
 	// CLI state
 	PrintVersion bool
@@ -93,6 +102,11 @@ type Config struct {
 	fs *flag.FlagSet
 
 	initOnce sync.Once
+
+	// Compiled values.
+	skipLocalFiles predicate.P[string]
+	skipLocalDirs  predicate.P[string]
+	ignore         predicate.P[string]
 }
 
 func (cfg *Config) Usage() {
@@ -108,51 +122,30 @@ func (cfg *Config) Init() error {
 }
 
 func (cfg *Config) loadFileConfig() error {
-	configFile := cfg.ConfigFile
-
-	if configFile == "" {
-		return nil
-	}
-
-	data, err := os.ReadFile(configFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-
-	s := envhelpers.Expand(string(data), func(k string) string {
-		return os.Getenv(k)
-	})
-	data = []byte(s)
-
-	conf := fileConfig{}
-
-	err = yaml.Unmarshal(data, &conf)
-	if err != nil {
-		return err
-	}
-
-	for _, r := range conf.Routes {
-		r.routerRE, err = regexp.Compile(r.Route)
-
+	if cfg.ConfigFile != "" {
+		data, err := os.ReadFile(cfg.ConfigFile)
 		if err != nil {
-			return err
+			if !os.IsNotExist(err) {
+				return err
+			}
+		} else {
+			s := envhelpers.Expand(string(data), func(k string) string {
+				return os.Getenv(k)
+			})
+			data = []byte(s)
+
+			err = yaml.Unmarshal(data, &cfg.fileConf)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	cfg.fileConf = conf
-
-	return nil
+	return cfg.fileConf.init()
 }
 
 func (cfg *Config) shouldIgnoreLocal(key string) bool {
-	if cfg.Ignore == "" {
-		return false
-	}
-
-	return cfg.IgnoreRE.MatchString(key)
+	return cfg.ignore(key)
 }
 
 func (cfg *Config) shouldIgnoreRemote(key string) bool {
@@ -165,12 +158,13 @@ func (cfg *Config) shouldIgnoreRemote(key string) bool {
 		}
 	}
 
-	if cfg.Ignore == "" {
-		return false
-	}
-
-	return cfg.IgnoreRE.MatchString(sub)
+	return cfg.ignore(sub)
 }
+
+const (
+	defaultSkipLocalFiles = `^(.*/)?/?.DS_Store$`
+	defaultSkipLocalDirs  = `^\/?(?:\w+\/)*(\.\w+)`
+)
 
 func (cfg *Config) init() error {
 	if cfg.BucketName == "" {
@@ -209,12 +203,50 @@ func (cfg *Config) init() error {
 		return errors.New("you passed a value for the flags public-access and acl, which is not supported. the public-access flag is deprecated. please use the acl flag moving forward")
 	}
 
-	if cfg.Ignore != "" {
-		re, err := regexp.Compile(cfg.Ignore)
-		if err != nil {
-			return errors.New("cannot compile 'ignore' flag pattern " + err.Error())
+	if cfg.Ignore != nil {
+		for _, pattern := range cfg.Ignore {
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				return errors.New("cannot compile 'ignore' flag pattern " + err.Error())
+			}
+			fn := func(s string) bool {
+				return re.MatchString(s)
+			}
+			cfg.ignore = cfg.ignore.Or(fn)
 		}
-		cfg.IgnoreRE = re
+	} else {
+		cfg.ignore = predicate.P[string](func(s string) bool {
+			return false
+		})
+	}
+
+	if cfg.SkipLocalFiles == nil {
+		cfg.SkipLocalFiles = Strings{defaultSkipLocalFiles}
+	}
+	if cfg.SkipLocalDirs == nil {
+		cfg.SkipLocalDirs = Strings{defaultSkipLocalDirs}
+	}
+
+	for _, pattern := range cfg.SkipLocalFiles {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return err
+		}
+		fn := func(s string) bool {
+			return re.MatchString(s)
+		}
+		cfg.skipLocalFiles = cfg.skipLocalFiles.Or(fn)
+	}
+
+	for _, pattern := range cfg.SkipLocalDirs {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return err
+		}
+		fn := func(s string) bool {
+			return re.MatchString(s)
+		}
+		cfg.skipLocalDirs = cfg.skipLocalDirs.Or(fn)
 	}
 
 	// load additional config (routes) from file if it exists.
@@ -253,7 +285,9 @@ func flagsToConfig(f *flag.FlagSet) *Config {
 	f.BoolVar(&cfg.PublicReadACL, "public-access", false, "DEPRECATED: please set -acl='public-read'")
 	f.StringVar(&cfg.ACL, "acl", "", "provide an ACL for uploaded objects. to make objects public, set to 'public-read'. all possible values are listed here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl (default \"private\")")
 	f.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")
-	f.StringVar(&cfg.Ignore, "ignore", "", "regexp pattern for ignoring files")
+	f.Var(&cfg.Ignore, "ignore", "regexp pattern for ignoring files, repeat flag for multiple patterns,")
+	f.Var(&cfg.SkipLocalFiles, "skip-local-files", fmt.Sprintf("regexp pattern of files to ignore when walking the local directory, repeat flag for multiple patterns, default %q", defaultSkipLocalFiles))
+	f.Var(&cfg.SkipLocalDirs, "skip-local-dirs", fmt.Sprintf("regexp pattern of files of directories to ignore when walking the local directory, repeat flag for multiple patterns, default %q", defaultSkipLocalDirs))
 	f.BoolVar(&cfg.Try, "try", false, "trial run, no remote updates")
 	f.BoolVar(&cfg.Verbose, "v", false, "enable verbose logging")
 	f.BoolVar(&cfg.Silent, "quiet", false, "enable silent mode")
@@ -343,5 +377,4 @@ func valsToStrs(val interface{}) ([]string, error) {
 		return nil, err
 	}
 	return []string{s}, nil
-
 }

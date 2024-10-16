@@ -51,7 +51,7 @@ func TestConfigFromArgs(t *testing.T) {
 	c.Assert(cfg.Try, qt.Equals, true)
 	c.Assert(cfg.RegionName, qt.Equals, "myregion")
 	c.Assert(cfg.CDNDistributionIDs, qt.DeepEquals, Strings{"mydistro1", "mydistro2"})
-	c.Assert(cfg.Ignore, qt.Equals, "^ignored-prefix.*")
+	c.Assert(cfg.Ignore, qt.DeepEquals, Strings{"^ignored-prefix.*"})
 }
 
 func TestConfigFromEnvAndFile(t *testing.T) {
@@ -66,6 +66,9 @@ func TestConfigFromEnvAndFile(t *testing.T) {
 bucket: mybucket
 region: myregion
 path: ${S3TEST_MYPATH}
+ignore: foo
+skip-local-dirs: ["a", "b"]
+skip-local-files: c
 
 routes:
     - route: "^.+\\.(a)$"
@@ -78,7 +81,7 @@ routes:
       gzip: false
     - route: "^.+\\.(c)$"
       gzip: "${S3TEST_GZIP@U}"
-`), 0644), qt.IsNil)
+`), 0o644), qt.IsNil)
 
 	args := []string{
 		"-config=" + cfgFile,
@@ -90,13 +93,15 @@ routes:
 	c.Assert(cfg.BucketName, qt.Equals, "mybucket")
 	c.Assert(cfg.BucketPath, qt.Equals, "mypath")
 	c.Assert(cfg.RegionName, qt.Equals, "myenvregion")
+	c.Assert(cfg.Ignore, qt.DeepEquals, Strings{"foo"})
+	c.Assert(cfg.SkipLocalDirs, qt.DeepEquals, Strings{"a", "b"})
+	c.Assert(cfg.SkipLocalFiles, qt.DeepEquals, Strings{"c"})
 	routes := cfg.fileConf.Routes
 	c.Assert(routes, qt.HasLen, 3)
 	c.Assert(routes[0].Route, qt.Equals, "^.+\\.(a)$")
 	c.Assert(routes[0].Headers["Cache-Control"], qt.Equals, "max-age=1234")
 	c.Assert(routes[0].Gzip, qt.IsTrue)
 	c.Assert(routes[2].Gzip, qt.IsTrue)
-
 }
 
 func TestConfigFromFileErrors(t *testing.T) {
@@ -105,7 +110,7 @@ func TestConfigFromFileErrors(t *testing.T) {
 	cfgFileInvalidYaml := filepath.Join(dir, "config_invalid_yaml.yml")
 	c.Assert(os.WriteFile(cfgFileInvalidYaml, []byte(`
 bucket=foo
-`), 0644), qt.IsNil)
+`), 0o644), qt.IsNil)
 
 	args := []string{
 		"-config=" + cfgFileInvalidYaml,
@@ -119,7 +124,7 @@ bucket=foo
 bucket: foo
 routes:
    - route: "*" # invalid regexp.
-`), 0644), qt.IsNil)
+`), 0o644), qt.IsNil)
 
 	args = []string{
 		"-config=" + cfgFileInvalidRoute,
@@ -129,7 +134,6 @@ routes:
 	c.Assert(err, qt.IsNil)
 	err = cfg.Init()
 	c.Assert(err, qt.IsNotNil)
-
 }
 
 func TestSetAclAndPublicAccessFlag(t *testing.T) {
@@ -195,4 +199,26 @@ func TestShouldIgnore(t *testing.T) {
 
 	c.Assert(cfgIgnore.shouldIgnoreRemote("my/path/any"), qt.IsFalse)
 	c.Assert(cfgIgnore.shouldIgnoreRemote("my/path/ignored-prefix/file.txt"), qt.IsTrue)
+}
+
+func TestSkipLocalDefault(t *testing.T) {
+	c := qt.New(t)
+
+	args := []string{
+		"-bucket=mybucket",
+	}
+
+	cfg, err := ConfigFromArgs(args)
+	c.Assert(err, qt.IsNil)
+	c.Assert(cfg.Init(), qt.IsNil)
+
+	c.Assert(cfg.skipLocalFiles("foo"), qt.IsFalse)
+	c.Assert(cfg.skipLocalDirs("foo"), qt.IsFalse)
+	c.Assert(cfg.skipLocalFiles(".DS_Store"), qt.IsTrue)
+	c.Assert(cfg.skipLocalFiles("a.DS_Store"), qt.IsFalse)
+	c.Assert(cfg.skipLocalFiles("foo/bar/.DS_Store"), qt.IsTrue)
+
+	c.Assert(cfg.skipLocalDirs("foo/bar/.git"), qt.IsTrue)
+	c.Assert(cfg.skipLocalDirs(".git"), qt.IsTrue)
+	c.Assert(cfg.skipLocalDirs("a.b"), qt.IsFalse)
 }
