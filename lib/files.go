@@ -238,6 +238,18 @@ type fileConfig struct {
 	Routes routes `yaml:"routes"`
 }
 
+func (c *fileConfig) init() error {
+	for _, r := range c.Routes {
+		var err error
+		r.routerRE, err = regexp.Compile(r.Route)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 type route struct {
 	Route   string            `yaml:"route"`
 	Headers map[string]string `yaml:"headers"`

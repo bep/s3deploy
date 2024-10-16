@@ -1,0 +1,30 @@
+env AWS_ACCESS_KEY_ID=$S3DEPLOY_TEST_KEY
+env AWS_SECRET_ACCESS_KEY=$S3DEPLOY_TEST_SECRET
+
+s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -acl 'public-read' -source=$WORK/public/
+
+stdout 'Deleted 0 of 0, uploaded 1, skipped 0.*100% changed'
+
+head /$S3DEPLOY_TEST_ID/
+stdout 'Status: 200'
+
+
+# Do the same with relative path.
+s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -acl 'public-read' -source=public/
+
+stdout 'Deleted 0 of 0, uploaded 0, skipped 1 .0% changed'
+
+head /$S3DEPLOY_TEST_ID/
+stdout 'Status: 200'
+
+
+# By default we skip all . directories and the .DS_Store file.
+-- public/index.html --
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Test</title></head><body><h1>Test</h1></body></html>
+-- public/.hidden/foo.txt --
+foo content.
+-- public/.DS_Store --
+binary
+-- public/foo/.DS_Store --
+binary
+

@@ -116,7 +116,7 @@ func TestDeployWitIgnorePattern(t *testing.T) {
 		Silent:     false,
 		SourcePath: source,
 		baseStore:  store,
-		Ignore:     re,
+		Ignore:     Strings{re},
 	}
 
 	prevCss := m["my/path/main.css"]

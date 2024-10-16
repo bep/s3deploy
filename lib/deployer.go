@@ -238,34 +238,34 @@ func (d *Deployer) plan(ctx context.Context) error {
 
 // walk a local directory
 func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFile) error {
-	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(basePath, func(fpath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
+		pathUnix := path.Clean(filepath.ToSlash(strings.TrimPrefix(fpath, basePath)))
+
 		if info.IsDir() {
-			// skip hidden directories like .git
-			if path != basePath && strings.HasPrefix(info.Name(), ".") {
+			if d.cfg.skipLocalDirs(pathUnix) {
 				return filepath.SkipDir
 			}
-
 			return nil
-		}
-
-		if info.Name() == ".DS_Store" {
-			return nil
+		} else {
+			if d.cfg.skipLocalFiles(pathUnix) {
+				return nil
+			}
 		}
 
 		if runtime.GOOS == "darwin" {
 			// When a file system is HFS+, its filepath is in NFD form.
-			path = norm.NFC.String(path)
+			fpath = norm.NFC.String(fpath)
 		}
 
-		abs, err := filepath.Abs(path)
+		abs, err := filepath.Abs(fpath)
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(basePath, path)
+		rel, err := filepath.Rel(basePath, fpath)
 		if err != nil {
 			return err
 		}
