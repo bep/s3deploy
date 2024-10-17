@@ -1,0 +1,27 @@
+env AWS_ACCESS_KEY_ID=$S3DEPLOY_TEST_KEY
+env AWS_SECRET_ACCESS_KEY=$S3DEPLOY_TEST_SECRET
+
+s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -acl 'public-read' -source=public/ -strip-index-html
+
+stdout 'Deleted 0 of 0, uploaded 3, skipped 0.*100% changed'
+stdout 'foo/ \(not found\) ↑ index.html \(not found\)'
+
+head /$S3DEPLOY_TEST_ID/index.html
+stdout 'Status: 200'
+s3get $S3DEPLOY_TEST_ID/foo/
+stdout 's3get.*/foo/:.*ContentType: text/html.*foo'
+s3get $S3DEPLOY_TEST_ID/bar/
+stdout 's3get.*/bar/:.*ContentType: text/html.*bar'
+s3get $S3DEPLOY_TEST_ID/index.html
+stdout 's3get.*/index.html:.*ContentType: text/html.*root'
+
+# Repeat the same command without any changes
+s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -source=public/ -strip-index-html
+stdout 'uploaded 0.*\(0% changed'
+
+-- public/index.html --
+root
+-- public/foo/index.html --
+deliberately no HTML in foo
+-- public/bar/index.html --
+<h1>bar</h1>

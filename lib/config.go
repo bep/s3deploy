@@ -74,6 +74,7 @@ type Config struct {
 	MaxDelete       int
 	ACL             string
 	PublicReadACL   bool
+	StripIndexHTML  bool
 	Verbose         bool
 	Silent          bool
 	Force           bool
@@ -283,6 +284,7 @@ func flagsToConfig(f *flag.FlagSet) *Config {
 	f.StringVar(&cfg.ConfigFile, "config", ".s3deploy.yml", "optional config file")
 	f.IntVar(&cfg.MaxDelete, "max-delete", 256, "maximum number of files to delete per deploy")
 	f.BoolVar(&cfg.PublicReadACL, "public-access", false, "DEPRECATED: please set -acl='public-read'")
+	f.BoolVar(&cfg.StripIndexHTML, "strip-index-html", false, "strip index.html from all directories expect for the root entry")
 	f.StringVar(&cfg.ACL, "acl", "", "provide an ACL for uploaded objects. to make objects public, set to 'public-read'. all possible values are listed here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl (default \"private\")")
 	f.BoolVar(&cfg.Force, "force", false, "upload even if the etags match")
 	f.Var(&cfg.Ignore, "ignore", "regexp pattern for ignoring files, repeat flag for multiple patterns,")

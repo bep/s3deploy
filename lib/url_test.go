@@ -32,3 +32,39 @@ func TestPathEscapeRFC1738(t *testing.T) {
 		c.Assert(actual, qt.Equals, tc.expected)
 	}
 }
+
+func TestPathJoin(t *testing.T) {
+	c := qt.New(t)
+
+	testCases := []struct {
+		elements []string
+		expected string
+	}{
+		{[]string{"a", "b"}, "a/b"},
+		{[]string{"a", "b/"}, "a/b/"},
+		{[]string{"/a", "b/"}, "/a/b/"},
+	}
+
+	for _, tc := range testCases {
+		actual := pathJoin(tc.elements...)
+		c.Assert(actual, qt.Equals, tc.expected)
+	}
+}
+
+func TestPathClean(t *testing.T) {
+	c := qt.New(t)
+
+	testCases := []struct {
+		in       string
+		expected string
+	}{
+		{"/path/", "/path/"},
+		{"/path/./", "/path/"},
+		{"/path", "/path"},
+	}
+
+	for _, tc := range testCases {
+		actual := pathClean(tc.in)
+		c.Assert(actual, qt.Equals, tc.expected)
+	}
+}

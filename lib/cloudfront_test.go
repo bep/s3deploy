@@ -27,6 +27,7 @@ func TestReduceInvalidationPaths(t *testing.T) {
 	c.Assert(client.normalizeInvalidationPaths("", 5, false, "/index.html"), qt.DeepEquals, []string{"/"})
 	c.Assert(client.normalizeInvalidationPaths("", 5, true, "/a", "/b"), qt.DeepEquals, []string{"/*"})
 	c.Assert(client.normalizeInvalidationPaths("root", 5, true, "/a", "/b"), qt.DeepEquals, []string{"/root/*"})
+	c.Assert(client.normalizeInvalidationPaths("root", 5, false, "/root/b/"), qt.DeepEquals, []string{"/root/b/"})
 
 	rootPlusMany := append([]string{"/index.html", "/styles.css"}, createFiles("css", false, 20)...)
 	normalized := client.normalizeInvalidationPaths("", 5, false, rootPlusMany...)

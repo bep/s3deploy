@@ -7,6 +7,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,6 +15,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/oklog/ulid/v2"
 
 	"github.com/rogpeppe/go-internal/testscript"
@@ -24,7 +28,6 @@ const s3IntegrationTestHttpRoot = "http://s3deployintegrationtest.s3-website.eu-
 func TestIntegration(t *testing.T) {
 	if os.Getenv("S3DEPLOY_TEST_KEY") == "" {
 		t.Skip("S3DEPLOY_TEST_KEY not set")
-
 	}
 	p := commonTestScriptsParam
 	p.Dir = "testscripts"
@@ -39,7 +42,6 @@ func TestUnfinished(t *testing.T) {
 	p := commonTestScriptsParam
 	p.Dir = "testscripts/unfinished"
 	testscript.Run(t, p)
-
 }
 
 func TestMain(m *testing.M) {
@@ -57,14 +59,28 @@ func TestMain(m *testing.M) {
 	)
 }
 
+const (
+	testBucket = "s3deployintegrationtest"
+	testRegion = "eu-north-1"
+)
+
 func setup(env *testscript.Env) error {
 	env.Setenv("S3DEPLOY_TEST_KEY", os.Getenv("S3DEPLOY_TEST_KEY"))
 	env.Setenv("S3DEPLOY_TEST_SECRET", os.Getenv("S3DEPLOY_TEST_SECRET"))
-	env.Setenv("S3DEPLOY_TEST_BUCKET", "s3deployintegrationtest")
-	env.Setenv("S3DEPLOY_TEST_REGION", "eu-north-1")
+	env.Setenv("S3DEPLOY_TEST_BUCKET", testBucket)
+	env.Setenv("S3DEPLOY_TEST_REGION", testRegion)
 	env.Setenv("S3DEPLOY_TEST_URL", s3IntegrationTestHttpRoot)
 	env.Setenv("S3DEPLOY_TEST_ID", strings.ToLower(ulid.Make().String()))
 	return nil
+}
+
+func gtKeySecret(ts *testscript.TestScript) (string, string) {
+	key := ts.Getenv("S3DEPLOY_TEST_KEY")
+	secret := ts.Getenv("S3DEPLOY_TEST_SECRET")
+	if key == "" || secret == "" {
+		ts.Fatalf("S3DEPLOY_TEST_KEY and S3DEPLOY_TEST_SECRET must be set")
+	}
+	return key, secret
 }
 
 var commonTestScriptsParam = testscript.Params{
@@ -72,6 +88,46 @@ var commonTestScriptsParam = testscript.Params{
 		return setup(env)
 	},
 	Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
+		"s3get": func(ts *testscript.TestScript, neg bool, args []string) {
+			key := args[0]
+			testKey, testSecret := gtKeySecret(ts)
+			config := aws.Config{
+				Region:      testRegion,
+				Credentials: credentials.NewStaticCredentialsProvider(testKey, testSecret, os.Getenv("AWS_SESSION_TOKEN")),
+			}
+
+			client := s3.NewFromConfig(config)
+
+			obj, err := client.GetObject(
+				context.Background(),
+				&s3.GetObjectInput{
+					Bucket: aws.String(testBucket),
+					Key:    aws.String(key),
+				},
+			)
+			if err != nil {
+				ts.Fatalf("failed to get object: %v", err)
+			}
+			defer obj.Body.Close()
+			var buf bytes.Buffer
+			if _, err := buf.ReadFrom(obj.Body); err != nil {
+				ts.Fatalf("failed to read object: %v", err)
+			}
+			var (
+				contentEncoding string
+				contentType     string
+			)
+			if obj.ContentEncoding != nil {
+				contentEncoding = *obj.ContentEncoding
+			}
+			if obj.ContentType != nil {
+				contentType = *obj.ContentType
+			}
+			fmt.Fprintf(ts.Stdout(), "s3get %s: ContentEncoding: %s ContentType: %s %s\n", key, contentEncoding, contentType, buf.String())
+			for k, v := range obj.Metadata {
+				fmt.Fprintf(ts.Stdout(), "s3get metadata: %s: %s\n", k, v)
+			}
+		},
 
 		// head executes HTTP HEAD on the given URL and prints the response status code and
 		// headers to stdout.
@@ -91,7 +147,6 @@ var commonTestScriptsParam = testscript.Params{
 			}
 			sort.Strings(headers)
 			fmt.Fprintf(ts.Stdout(), "Headers: %s", strings.Join(headers, ";"))
-
 		},
 
 		// append appends to a file with a leaading newline.
