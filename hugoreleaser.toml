@@ -113,7 +113,7 @@ archive_alias_replacements = {}
             goarch = "amd64"
 
 [[archives]]
-    paths = ["builds/unix/**"]
+    paths = ["builds/{unix,macos}/**"]
 [[archives]]
     paths = ["builds/macos/**"]
     [archives.archive_settings]
