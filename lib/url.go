@@ -1,5 +1,10 @@
 package lib
 
+import (
+	"path"
+	"strings"
+)
+
 // [RFC 1738](https://www.ietf.org/rfc/rfc1738.txt)
 // §2.2
 func shouldEscape(c byte) bool {
@@ -70,4 +75,36 @@ func pathEscapeRFC1738(s string) string {
 		}
 	}
 	return string(t)
+}
+
+// Like path.Join, but preserves trailing slash..
+func pathJoin(elem ...string) string {
+	if len(elem) == 0 {
+		return ""
+	}
+	hadSlash := strings.HasSuffix(elem[len(elem)-1], "/")
+	p := path.Join(elem...)
+	if hadSlash {
+		p += "/"
+	}
+	return p
+}
+
+// pathClean works like path.Clean but will always  preserve a trailing slash.
+func pathClean(p string) string {
+	hadSlash := strings.HasSuffix(p, "/")
+	p = path.Clean(p)
+	if hadSlash && !strings.HasSuffix(p, "/") {
+		p += "/"
+	}
+	return p
+}
+
+// trimIndexHTML remaps paths matching "<dir>/index.html" to "<dir>/".
+func trimIndexHTML(p string) string {
+	const suffix = "/index.html"
+	if strings.HasSuffix(p, suffix) {
+		return p[:len(p)-len(suffix)+1]
+	}
+	return p
 }

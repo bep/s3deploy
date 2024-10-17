@@ -152,7 +152,7 @@ func (d *Deployer) printf(format string, a ...interface{}) {
 }
 
 func (d *Deployer) enqueueUpload(ctx context.Context, f *osFile) {
-	d.Printf("%s (%s) %s ", f.relPath, f.reason, up)
+	d.Printf("%s (%s) %s ", f.keyPath, f.reason, up)
 	select {
 	case <-ctx.Done():
 	case d.filesToUpload <- f:
@@ -197,9 +197,9 @@ func (d *Deployer) plan(ctx context.Context) error {
 		up := true
 		reason := reasonNotFound
 
-		bucketPath := f.relPath
+		bucketPath := f.keyPath
 		if d.cfg.BucketPath != "" {
-			bucketPath = path.Join(d.cfg.BucketPath, bucketPath)
+			bucketPath = pathJoin(d.cfg.BucketPath, bucketPath)
 		}
 
 		if remoteFile, ok := remoteFiles[bucketPath]; ok {
@@ -274,7 +274,7 @@ func (d *Deployer) walk(ctx context.Context, basePath string, files chan<- *osFi
 			return nil
 		}
 
-		f, err := newOSFile(d.cfg.fileConf.Routes, d.cfg.BucketPath, rel, abs, info)
+		f, err := newOSFile(d.cfg, rel, abs, info)
 		if err != nil {
 			return err
 		}

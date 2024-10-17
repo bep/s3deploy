@@ -84,14 +84,14 @@ The list of flags from running `s3deploy -h`:
     regexp pattern of files to ignore when walking the local directory, repeat flag for multiple patterns, default "^(.*/)?/?.DS_Store$"
 -source string
     path of files to upload (default ".")
+-strip-index-html
+    strip index.html from all directories expect for the root entry
 -try
     trial run, no remote updates
 -v	enable verbose logging
 -workers int
     number of workers to upload files (default -1)
 ```
-
-Note that `-skip-local-dirs` and `-skip-local-files` will match against a relative path from the source directory with Unix-style path separators. The source directory is represented by `.`, the rest starts with a `/`.
 
 The flags can be set in one of (in priority order):
 
@@ -109,6 +109,14 @@ max-delete: "${MYVARS_MAX_DELETE@U}"
 ```
 
 Note the special `@U` (_Unquoute_) syntax for the int field.
+
+#### Skip local files and directories
+
+The options `-skip-local-dirs` and `-skip-local-files` will match against a relative path from the source directory with Unix-style path separators. The source directory is represented by `.`, the rest starts with a `/`.
+
+#### Strip index.html
+
+The option `-strip-index-html` strips index.html from all directories expect for the root entry. This matches the option with (almost) same name in [hugo deploy](https://gohugo.io/hosting-and-deployment/hugo-deploy/). This simplifies the cloud configuration needed for some use cases, such as CloudFront distributions with S3 bucket origins.  See this [PR](https://github.com/gohugoio/hugo/pull/12608) for more information.
 
 ### Routes
 

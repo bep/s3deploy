@@ -15,7 +15,6 @@ import (
 	"mime"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"sync"
@@ -55,6 +54,7 @@ type localFile interface {
 
 type osFile struct {
 	relPath string
+	keyPath string // may be different from relPath if StripIndexHTML is set.
 
 	// Filled when BucketPath is provided. Will store files in a sub-path
 	// of the target file store.
@@ -77,9 +77,9 @@ type osFile struct {
 
 func (f *osFile) Key() string {
 	if f.targetRoot != "" {
-		return path.Join(f.targetRoot, f.relPath)
+		return pathJoin(f.targetRoot, f.keyPath)
 	}
-	return f.relPath
+	return f.keyPath
 }
 
 func (f *osFile) UploadReason() uploadReason {
@@ -177,7 +177,10 @@ func (f *osFile) shouldThisReplace(other file) (bool, uploadReason) {
 	return false, ""
 }
 
-func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInfo) (*osFile, error) {
+func newOSFile(cfg *Config, relPath, absPath string, fi os.FileInfo) (*osFile, error) {
+	targetRoot := cfg.BucketPath
+	routes := cfg.fileConf.Routes
+
 	relPath = filepath.ToSlash(relPath)
 
 	file, err := os.Open(absPath)
@@ -211,7 +214,12 @@ func newOSFile(routes routes, targetRoot, relPath, absPath string, fi os.FileInf
 		mFile = memfile.New(b)
 	}
 
-	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: absPath, relPath: relPath, size: size}
+	keyPath := relPath
+	if cfg.StripIndexHTML {
+		keyPath = trimIndexHTML(keyPath)
+	}
+
+	of := &osFile{route: route, f: mFile, targetRoot: targetRoot, absPath: absPath, relPath: relPath, keyPath: keyPath, size: size}
 
 	if err := of.initContentType(peek); err != nil {
 		return nil, err

@@ -176,7 +176,7 @@ func (c *cloudFrontClient) normalizeInvalidationPaths(
 	var maxlevels int
 
 	for _, p := range paths {
-		p = path.Clean(p)
+		p = pathClean(p)
 		if !strings.HasPrefix(p, "/") {
 			p = "/" + p
 		}

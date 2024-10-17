@@ -91,5 +91,14 @@ func openTestFile(name string) (*osFile, error) {
 		return nil, err
 	}
 
-	return newOSFile(nil, "", relPath, absPath, fi)
+	args := []string{
+		"-bucket=mybucket",
+	}
+
+	cfg, err := ConfigFromArgs(args)
+	if err != nil {
+		return nil, err
+	}
+
+	return newOSFile(cfg, relPath, absPath, fi)
 }
