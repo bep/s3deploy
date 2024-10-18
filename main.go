@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	version = "v2"
-	commit  = "none"
-	date    = "unknown"
+	commit = "none"
+	tag    = "(devel)"
+	date   = "unknown"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func parseAndRun(args []string) error {
 	initVersionInfo()
 
 	if !cfg.Silent {
-		fmt.Printf("s3deploy %v, commit %v, built at %v\n", version, commit, date)
+		fmt.Printf("s3deploy %v, commit %v, built at %v\n", tag, commit, date)
 	}
 
 	if cfg.Help {
@@ -59,21 +59,13 @@ func parseAndRun(args []string) error {
 	}
 
 	return nil
-
 }
 
 func initVersionInfo() {
-	if commit != "none" {
-		// Set by goreleaser.
-		return
-	}
-
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
 		return
 	}
-
-	version = bi.Main.Version
 
 	for _, s := range bi.Settings {
 		switch s.Key {
@@ -85,5 +77,4 @@ func initVersionInfo() {
 		case "vcs.modified":
 		}
 	}
-
 }

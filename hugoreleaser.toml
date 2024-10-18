@@ -26,7 +26,7 @@ archive_alias_replacements = {}
     binary  = "s3deploy"
     flags   = ["-buildmode", "exe"]
     env     = ["CGO_ENABLED=0"]
-    ldflags = ""
+    ldflags = "-s -w -X main.tag=${HUGORELEASER_TAG}"
 
 # Archive settings can be set on any of Project > Archive.
 # Follows the same merge rules as Build settings.
