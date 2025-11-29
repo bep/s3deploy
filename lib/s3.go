@@ -116,7 +116,7 @@ func (s *s3Store) FileMap(ctx context.Context, opts ...opOption) (map[string]fil
 }
 
 func (s *s3Store) Put(ctx context.Context, f localFile, opts ...opOption) error {
-  sizeValue := f.Size()
+	sizeValue := f.Size()
 
 	input := &s3.PutObjectInput{
 		Bucket:        aws.String(s.bucket),

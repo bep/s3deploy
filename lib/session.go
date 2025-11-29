@@ -1,3 +1,8 @@
+// Copyright © 2022 Bjørn Erik Pedersen <bjorn.erik.pedersen@gmail.com>.
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
 package lib
 
 import (
@@ -9,8 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 )
 
-// Note: this version requires callers to provide a context.Context.
-// It's the recommended approach because LoadDefaultConfig requires a context.
 func newAWSConfig(ctx context.Context, cfg *Config) (aws.Config, error) {
 	// Build options for LoadDefaultConfig
 	var opts []func(*config.LoadOptions) error
@@ -26,20 +29,16 @@ func newAWSConfig(ctx context.Context, cfg *Config) (aws.Config, error) {
 		))
 	}
 
-	// Load the SDK default config (credentials chain, profiles, SSO, shared config, etc.)
-	sdkCfg, err := config.LoadDefaultConfig(ctx, opts...)
-	if err != nil {
-		return aws.Config{}, err
-	}
-
 	if cfg.EndpointURL != "" {
-		resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
-				URL: cfg.EndpointURL,
-			}, nil
-		})
-		sdkCfg.EndpointResolverWithOptions = resolver
+		opts = append(opts, config.WithEndpointResolverWithOptions(
+			aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				return aws.Endpoint{
+					URL: cfg.EndpointURL,
+				}, nil
+			}),
+		))
 	}
 
-	return sdkCfg, nil
+	// Load the SDK default config (credentials chain, profiles, SSO, shared config, etc.)
+	return config.LoadDefaultConfig(ctx, opts...)
 }
