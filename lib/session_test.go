@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"context"
 	"testing"
 
 	qt "github.com/frankban/quicktest"
@@ -16,7 +17,7 @@ func TestNewAWSConfigWithCustomEndpoint(t *testing.T) {
 		Silent:      true,
 	}
 
-	awsCfg, err := newAWSConfig(cfg)
+	awsCfg, err := newAWSConfig(context.Background(), cfg)
 	c.Assert(err, qt.IsNil)
 
 	endpoint, err := awsCfg.EndpointResolverWithOptions.ResolveEndpoint("s3", "us-east-1")

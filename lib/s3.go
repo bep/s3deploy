@@ -45,14 +45,14 @@ func (f *s3File) ETag() string {
 }
 
 func (f *s3File) Size() int64 {
-	return f.o.Size
+	return *f.o.Size
 }
 
-func newRemoteStore(cfg *Config, logger printer) (*s3Store, error) {
+func newRemoteStore(ctx context.Context, cfg *Config, logger printer) (*s3Store, error) {
 	var s *s3Store
 	var cfc *cloudFrontClient
 
-	awsConfig, err := newAWSConfig(cfg)
+	awsConfig, err := newAWSConfig(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (s *s3Store) FileMap(ctx context.Context, opts ...opOption) (map[string]fil
 			m[*o.Key] = &s3File{o: o}
 		}
 
-		if listObjectsV2Response.IsTruncated {
+		if *listObjectsV2Response.IsTruncated {
 			listObjectsV2Response, err = s.svc.ListObjectsV2(ctx,
 				&s3.ListObjectsV2Input{
 					Bucket:            aws.String(s.bucket),
@@ -116,13 +116,15 @@ func (s *s3Store) FileMap(ctx context.Context, opts ...opOption) (map[string]fil
 }
 
 func (s *s3Store) Put(ctx context.Context, f localFile, opts ...opOption) error {
+  sizeValue := f.Size()
+
 	input := &s3.PutObjectInput{
 		Bucket:        aws.String(s.bucket),
 		Key:           aws.String(f.Key()),
 		Body:          f.Content(),
 		ACL:           types.ObjectCannedACL(s.acl),
 		ContentType:   aws.String(f.ContentType()),
-		ContentLength: f.Size(),
+		ContentLength: &sizeValue,
 	}
 
 	if err := s.applyMetadataToPutObjectInput(input, f); err != nil {
