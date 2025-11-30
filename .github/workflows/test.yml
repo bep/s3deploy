@@ -1,7 +1,9 @@
 on:
   push:
     branches: [ master ]
-  pull_request:
+  # Use pull_request_target instead of pull_request (we need some S3 keys to a test environment)
+  pull_request_target:
+    types: [opened, ready_for_review]
 name: Test
 permissions:
   contents: read
