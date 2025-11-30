@@ -81,7 +81,7 @@ func Deploy(cfg *Config) (DeployStats, error) {
 	baseStore := d.cfg.baseStore
 	if baseStore == nil {
 		var err error
-		baseStore, err = newRemoteStore(ctx, d.cfg, d)
+		baseStore, err = newRemoteStore(d.cfg, d)
 		if err != nil {
 			return *d.stats, err
 		}

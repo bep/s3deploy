@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"context"
 	"io"
 	"testing"
 
@@ -17,7 +16,7 @@ func TestNewAWSConfigWithCustomEndpoint(t *testing.T) {
 		EndpointURL: "http://localhost:9000",
 		Silent:      true,
 	}
-	store, err := newRemoteStore(context.Background(), cfg, newPrinter(io.Discard))
+	store, err := newRemoteStore(cfg, newPrinter(io.Discard))
 	c.Assert(err, qt.IsNil)
 	c.Assert(store, qt.Not(qt.IsNil))
 

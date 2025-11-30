@@ -51,11 +51,11 @@ func (f *s3File) Size() int64 {
 	return *f.o.Size
 }
 
-func newRemoteStore(ctx context.Context, cfg *Config, logger printer) (*s3Store, error) {
+func newRemoteStore(cfg *Config, logger printer) (*s3Store, error) {
 	var s *s3Store
 	var cfc *cloudFrontClient
 
-	awsConfig, err := newAWSConfig(ctx, cfg)
+	awsConfig, err := newAWSConfig(cfg)
 	if err != nil {
 		return nil, err
 	}

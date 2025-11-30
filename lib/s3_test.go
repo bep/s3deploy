@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"context"
 	"io"
 	"testing"
 
@@ -18,7 +17,7 @@ func TestNewRemoteStoreNoAclProvided(t *testing.T) {
 		Silent:     true,
 	}
 
-	s, err := newRemoteStore(context.Background(), cfg, newPrinter(io.Discard))
+	s, err := newRemoteStore(cfg, newPrinter(io.Discard))
 	c.Assert(err, qt.IsNil)
 
 	c.Assert("private", qt.Equals, s.acl)
@@ -34,7 +33,7 @@ func TestNewRemoteStoreAclProvided(t *testing.T) {
 		Silent:     true,
 	}
 
-	s, err := newRemoteStore(context.Background(), cfg, newPrinter(io.Discard))
+	s, err := newRemoteStore(cfg, newPrinter(io.Discard))
 	c.Assert(err, qt.IsNil)
 
 	c.Assert("public-read", qt.Equals, s.acl)
@@ -50,7 +49,7 @@ func TestNewRemoteStoreOtherCannedAclProvided(t *testing.T) {
 		Silent:     true,
 	}
 
-	s, err := newRemoteStore(context.Background(), cfg, newPrinter(io.Discard))
+	s, err := newRemoteStore(cfg, newPrinter(io.Discard))
 	c.Assert(err, qt.IsNil)
 
 	c.Assert("bucket-owner-full-control", qt.Equals, s.acl)
@@ -67,7 +66,7 @@ func TestNewRemoteStoreDeprecatedPublicReadACLFlaglProvided(t *testing.T) {
 		Silent:        true,
 	}
 
-	s, err := newRemoteStore(context.Background(), cfg, newPrinter(io.Discard))
+	s, err := newRemoteStore(cfg, newPrinter(io.Discard))
 	c.Assert(err, qt.IsNil)
 
 	c.Assert("public-read", qt.Equals, s.acl)
