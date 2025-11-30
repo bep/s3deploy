@@ -18,20 +18,10 @@ func newAWSConfig(cfg *Config) (aws.Config, error) {
 		Credentials: createCredentials(cfg),
 	}
 
-	if cfg.EndpointURL != "" {
-		resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
-				URL: cfg.EndpointURL,
-			}, nil
-		})
-		config.EndpointResolverWithOptions = resolver
-	}
-
 	return config, nil
 }
 
 func createCredentials(cfg *Config) aws.CredentialsProvider {
-
 	if cfg.AccessKey != "" {
 		return credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, os.Getenv("AWS_SESSION_TOKEN"))
 	}
