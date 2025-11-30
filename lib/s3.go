@@ -45,7 +45,10 @@ func (f *s3File) ETag() string {
 }
 
 func (f *s3File) Size() int64 {
-	return f.o.Size
+	if f.o.Size == nil {
+		return 0
+	}
+	return *f.o.Size
 }
 
 func newRemoteStore(cfg *Config, logger printer) (*s3Store, error) {
@@ -57,7 +60,11 @@ func newRemoteStore(cfg *Config, logger printer) (*s3Store, error) {
 		return nil, err
 	}
 
-	cf := cloudfront.NewFromConfig(awsConfig)
+	cf := cloudfront.NewFromConfig(awsConfig, func(o *cloudfront.Options) {
+		if cfg.EndpointURL != "" {
+			o.BaseEndpoint = aws.String(cfg.EndpointURL)
+		}
+	})
 
 	if len(cfg.CDNDistributionIDs) > 0 {
 		cfc, err = newCloudFrontClient(cf, logger, cfg)
@@ -73,7 +80,11 @@ func newRemoteStore(cfg *Config, logger printer) (*s3Store, error) {
 		acl = "public-read"
 	}
 
-	client := s3.NewFromConfig(awsConfig)
+	client := s3.NewFromConfig(awsConfig, func(o *s3.Options) {
+		if cfg.EndpointURL != "" {
+			o.BaseEndpoint = aws.String(cfg.EndpointURL)
+		}
+	})
 
 	s = &s3Store{svc: client, cfc: cfc, acl: acl, bucket: cfg.BucketName, r: cfg.fileConf.Routes, bucketPath: cfg.BucketPath}
 
@@ -98,7 +109,7 @@ func (s *s3Store) FileMap(ctx context.Context, opts ...opOption) (map[string]fil
 			m[*o.Key] = &s3File{o: o}
 		}
 
-		if listObjectsV2Response.IsTruncated {
+		if listObjectsV2Response.IsTruncated != nil && *listObjectsV2Response.IsTruncated {
 			listObjectsV2Response, err = s.svc.ListObjectsV2(ctx,
 				&s3.ListObjectsV2Input{
 					Bucket:            aws.String(s.bucket),
@@ -122,7 +133,7 @@ func (s *s3Store) Put(ctx context.Context, f localFile, opts ...opOption) error 
 		Body:          f.Content(),
 		ACL:           types.ObjectCannedACL(s.acl),
 		ContentType:   aws.String(f.ContentType()),
-		ContentLength: f.Size(),
+		ContentLength: aws.Int64(f.Size()),
 	}
 
 	if err := s.applyMetadataToPutObjectInput(input, f); err != nil {

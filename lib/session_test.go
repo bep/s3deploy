@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"io"
 	"testing"
 
 	qt "github.com/frankban/quicktest"
@@ -15,12 +16,9 @@ func TestNewAWSConfigWithCustomEndpoint(t *testing.T) {
 		EndpointURL: "http://localhost:9000",
 		Silent:      true,
 	}
-
-	awsCfg, err := newAWSConfig(cfg)
+	store, err := newRemoteStore(cfg, newPrinter(io.Discard))
 	c.Assert(err, qt.IsNil)
+	c.Assert(store, qt.Not(qt.IsNil))
 
-	endpoint, err := awsCfg.EndpointResolverWithOptions.ResolveEndpoint("s3", "us-east-1")
-	c.Assert(err, qt.IsNil)
-
-	c.Assert("http://localhost:9000", qt.Equals, endpoint.URL)
+	c.Assert(*store.svc.Options().BaseEndpoint, qt.Equals, "http://localhost:9000")
 }
