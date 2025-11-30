@@ -174,13 +174,6 @@ func (cfg *Config) init() error {
 
 	// The region may be possible for the AWS SDK to figure out from the context.
 
-	if cfg.AccessKey == "" {
-		cfg.AccessKey = os.Getenv("AWS_ACCESS_KEY_ID")
-	}
-	if cfg.SecretKey == "" {
-		cfg.SecretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
-	}
-
 	if cfg.AccessKey == "" && cfg.SecretKey == "" {
 		// The AWS SDK will fall back to other ways of finding credentials, so we cannot throw an error here; it will eventually fail.
 	} else if cfg.AccessKey == "" || cfg.SecretKey == "" {
