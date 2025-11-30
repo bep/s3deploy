@@ -6,26 +6,29 @@
 package lib
 
 import (
+	"context"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 )
 
-func newAWSConfig(cfg *Config) (aws.Config, error) {
-	config := aws.Config{
-		Region:      cfg.RegionName,
-		Credentials: createCredentials(cfg),
+func newAWSConfig(ctx context.Context, cfg *Config) (aws.Config, error) {
+	// Build options for LoadDefaultConfig
+	var opts []func(*config.LoadOptions) error
+
+	if cfg.RegionName != "" {
+		opts = append(opts, config.WithRegion(cfg.RegionName))
 	}
 
-	return config, nil
-}
-
-func createCredentials(cfg *Config) aws.CredentialsProvider {
 	if cfg.AccessKey != "" {
-		return credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, os.Getenv("AWS_SESSION_TOKEN"))
+		// If static creds are provided, inject them while still loading other defaults.
+		opts = append(opts, config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, os.Getenv("AWS_SESSION_TOKEN")),
+		))
 	}
 
-	// Use AWS default
-	return nil
+	// Load the SDK default config (credentials chain, profiles, SSO, shared config, etc.)
+	return config.LoadDefaultConfig(ctx, opts...)
 }
