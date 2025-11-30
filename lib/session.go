@@ -18,16 +18,6 @@ func newAWSConfig(ctx context.Context, cfg *Config) (aws.Config, error) {
 	// Build options for LoadDefaultConfig
 	var opts []func(*config.LoadOptions) error
 
-	if cfg.EndpointURL != "" {
-		opts = append(opts, config.WithEndpointResolverWithOptions(
-			aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-				return aws.Endpoint{
-					URL: cfg.EndpointURL,
-				}, nil
-			}),
-		))
-	}
-
 	if cfg.RegionName != "" {
 		opts = append(opts, config.WithRegion(cfg.RegionName))
 	}
