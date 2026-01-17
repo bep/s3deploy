@@ -137,7 +137,7 @@ archives:
         type: "gorun"
         # Note there is a "local" variant of this that may be simpler to set up, see
         # https://github.com/gohugoio/hugoreleaser-archive-plugins/tree/main/macospkg
-        command: "github.com/gohugoio/hugoreleaser-archive-plugins/macospkgremote@v5cf673e24cb39d8bbe63930fe6c499211b43c633"
+        command: "github.com/gohugoio/hugoreleaser-archive-plugins/macospkgremote@5cf673e24cb39d8bbe63930fe6c499211b43c633"
       custom_settings:
         # Package settings
         package_identifier: "com.bepsays.s3deploy"
