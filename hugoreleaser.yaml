@@ -166,7 +166,7 @@ archives:
         # If the plugin source lives locally, this can also be a file path,
         # e.g. './myplugin'. In those setups you may need to set dir to the directory path,
         # and use "." for the command.
-        command: "github.com/gohugoio/hugoreleaser-archive-plugins/deb@v0.6.1"
+        command: "github.com/gohugoio/hugoreleaser-archive-plugins/deb@latest"
       custom_settings:
         # Custom settings as defined by the Deb plugin.
         vendor: "gohugo.io"
