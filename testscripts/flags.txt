@@ -4,7 +4,7 @@ stderr 'AWS bucket is required'
 
 # Missing keys.
 ! s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID
-stderr 'Access Denied'
+stderr 'get credentials: failed'
 
 # Invalid keys.
 ! s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DEPLOY_TEST_ID -key foo -secret bar
