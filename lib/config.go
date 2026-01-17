@@ -189,6 +189,15 @@ func (cfg *Config) init() error {
 
 	cfg.SourcePath = filepath.Clean(cfg.SourcePath)
 
+	// Resolve symlinks
+	{
+		re, err := filepath.EvalSymlinks(cfg.SourcePath)
+		if err != nil {
+			return errors.New("failed to resolve symlink " + err.Error())
+		}
+		cfg.SourcePath = re
+	}
+
 	// Sanity check to prevent people from uploading their entire disk.
 	// The returned path from filepath.Clean ends in a slash only if it represents
 	// a root directory, such as "/" on Unix or `C:\` on Windows.
