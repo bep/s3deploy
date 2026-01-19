@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.40.0
+	github.com/aws/aws-sdk-go-v2/config v1.32.2
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.2
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.58.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.92.1
@@ -13,7 +14,7 @@ require (
 	github.com/frankban/quicktest v1.14.6
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/peterbourgon/ff/v3 v3.4.0
-	github.com/rogpeppe/go-internal v1.12.0
+	github.com/rogpeppe/go-internal v1.14.1
 	golang.org/x/sync v0.18.0
 	golang.org/x/text v0.31.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -21,7 +22,6 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.3 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.32.2 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.14 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.14 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.14 // indirect
