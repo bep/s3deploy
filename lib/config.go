@@ -190,13 +190,11 @@ func (cfg *Config) init() error {
 	cfg.SourcePath = filepath.Clean(cfg.SourcePath)
 
 	// Resolve symlinks
-	{
-		re, err := filepath.EvalSymlinks(cfg.SourcePath)
-		if err != nil {
-			return errors.New("failed to resolve symlink " + err.Error())
-		}
-		cfg.SourcePath = re
+	re, err := filepath.EvalSymlinks(cfg.SourcePath)
+	if err != nil {
+		return errors.New("failed to resolve symlink " + err.Error())
 	}
+	cfg.SourcePath = re
 
 	// Sanity check to prevent people from uploading their entire disk.
 	// The returned path from filepath.Clean ends in a slash only if it represents
@@ -260,7 +258,7 @@ func (cfg *Config) init() error {
 	}
 
 	// load additional config (routes) from file if it exists.
-	err := cfg.loadFileConfig()
+	err = cfg.loadFileConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config from %s: %s", cfg.ConfigFile, err)
 	}
