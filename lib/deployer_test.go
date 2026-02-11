@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -260,7 +261,7 @@ func TestDeployMaxDelete(t *testing.T) {
 
 	m := make(map[string]file)
 
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		m[fmt.Sprintf("file%d.css", i)] = &testFile{}
 	}
 
@@ -328,9 +329,7 @@ func (s *testStore) FileMap(ctx context.Context, opts ...opOption) (map[string]f
 		return nil, errors.New("fail")
 	}
 	c := make(map[string]file)
-	for k, v := range s.m {
-		c[k] = v
-	}
+	maps.Copy(c, s.m)
 	return c, nil
 }
 

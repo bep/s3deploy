@@ -89,15 +89,14 @@ func (s *store) DeleteObjects(ctx context.Context, keys []string, opts ...opOpti
 		return nil
 	}
 
-	chunkSize := 1000 // This is the maximum supported by the AWS SDK.
-	if conf.maxDelete < chunkSize {
-		chunkSize = conf.maxDelete
-	}
+	chunkSize := min(
+		// This is the maximum supported by the AWS SDK.
+		conf.maxDelete, 1000)
 
 	keyChunks := chunkStrings(keys, chunkSize)
 	deleted := 0
 
-	for i := 0; i < len(keyChunks); i++ {
+	for i := range keyChunks {
 		keyChunk := keyChunks[i]
 
 		err := s.delegate.DeleteObjects(ctx, keyChunk, opts...)
@@ -210,11 +209,7 @@ func chunkStrings(s []string, size int) [][]string {
 	var chunks [][]string
 
 	for i := 0; i < len(s); i += size {
-		end := i + size
-
-		if end > len(s) {
-			end = len(s)
-		}
+		end := min(i+size, len(s))
 
 		chunks = append(chunks, s[i:end])
 	}

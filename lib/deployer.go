@@ -127,8 +127,8 @@ func Deploy(cfg *Config) (DeployStats, error) {
 }
 
 type printer interface {
-	Println(a ...interface{}) (n int, err error)
-	Printf(format string, a ...interface{}) (n int, err error)
+	Println(a ...any) (n int, err error)
+	Printf(format string, a ...any) (n int, err error)
 }
 
 type print struct {
@@ -139,15 +139,15 @@ func newPrinter(out io.Writer) printer {
 	return print{out: out}
 }
 
-func (p print) Println(a ...interface{}) (n int, err error) {
+func (p print) Println(a ...any) (n int, err error) {
 	return fmt.Fprintln(p.out, a...)
 }
 
-func (p print) Printf(format string, a ...interface{}) (n int, err error) {
+func (p print) Printf(format string, a ...any) (n int, err error) {
 	return fmt.Fprintf(p.out, format, a...)
 }
 
-func (d *Deployer) printf(format string, a ...interface{}) {
+func (d *Deployer) printf(format string, a ...any) {
 	fmt.Fprintf(d.outv, format, a...)
 }
 

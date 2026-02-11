@@ -324,7 +324,7 @@ func parserYAMLConfig(r io.Reader, set func(name, value string) error) error {
 
 	r = strings.NewReader(s)
 
-	var m map[string]interface{}
+	var m map[string]any
 	d := yaml.NewDecoder(r)
 	if err := d.Decode(&m); err != nil && err != io.EOF {
 		return err
@@ -346,7 +346,7 @@ func parserYAMLConfig(r io.Reader, set func(name, value string) error) error {
 	return nil
 }
 
-func valToStr(val interface{}) (string, error) {
+func valToStr(val any) (string, error) {
 	switch v := val.(type) {
 	case byte:
 		return string([]byte{v}), nil
@@ -369,8 +369,8 @@ func valToStr(val interface{}) (string, error) {
 	}
 }
 
-func valsToStrs(val interface{}) ([]string, error) {
-	if vals, ok := val.([]interface{}); ok {
+func valsToStrs(val any) ([]string, error) {
+	if vals, ok := val.([]any); ok {
 		ss := make([]string, len(vals))
 		for i := range vals {
 			s, err := valToStr(vals[i])

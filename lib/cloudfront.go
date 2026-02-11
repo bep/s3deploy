@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -224,10 +225,8 @@ func (c *cloudFrontClient) normalizeInvalidationPaths(
 		}
 	}
 
-	for _, pattern := range normalized {
-		if pattern == matchAll {
-			return clearAll
-		}
+	if slices.Contains(normalized, matchAll) {
+		return clearAll
 	}
 
 	return normalized
@@ -235,7 +234,7 @@ func (c *cloudFrontClient) normalizeInvalidationPaths(
 
 func uniqueStrings(s []string) []string {
 	var unique []string
-	set := map[string]interface{}{}
+	set := map[string]any{}
 	for _, val := range s {
 		if _, ok := set[val]; !ok {
 			unique = append(unique, val)
