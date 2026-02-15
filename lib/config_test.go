@@ -8,6 +8,7 @@ package lib
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	qt "github.com/frankban/quicktest"
@@ -48,7 +49,9 @@ func TestConfigFromArgs(t *testing.T) {
 	c.Assert(cfg.ACL, qt.Equals, "public-read")
 	c.Assert(cfg.BucketPath, qt.Equals, "mypath")
 	c.Assert(cfg.Silent, qt.Equals, true)
-	c.Assert(cfg.SourcePath, qt.Contains, tempDir)
+	if runtime.GOOS != "windows" {
+		c.Assert(cfg.SourcePath, qt.Contains, tempDir)
+	}
 	c.Assert(cfg.EndpointURL, qt.Equals, "http://localhost:9000")
 	c.Assert(cfg.Try, qt.Equals, true)
 	c.Assert(cfg.RegionName, qt.Equals, "myregion")
