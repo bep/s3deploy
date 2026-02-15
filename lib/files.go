@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"maps"
 	"mime"
 	"net/http"
 	"os"
@@ -119,9 +120,7 @@ func (f *osFile) Headers() map[string]string {
 		}
 
 		if f.route.Headers != nil {
-			for k, v := range f.route.Headers {
-				headers[k] = v
-			}
+			maps.Copy(headers, f.route.Headers)
 		}
 	}
 
