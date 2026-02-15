@@ -45,18 +45,16 @@ func TestUnfinished(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	os.Exit(
-		testscript.RunMain(m, map[string]func() int{
-			// The main program.
-			"s3deploy": func() int {
-				if err := parseAndRun(os.Args[1:]); err != nil {
-					fmt.Fprintln(os.Stderr, err)
-					return 1
-				}
-				return 0
-			},
-		}),
-	)
+	testscript.Main(m, map[string]func(){
+		// The main program.
+		"s3deploy": func() {
+			if err := parseAndRun(os.Args[1:]); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+
+			}
+		},
+	})
 }
 
 const (

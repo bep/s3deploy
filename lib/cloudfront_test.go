@@ -118,7 +118,7 @@ func TestNewCloudFrontClient(t *testing.T) {
 func createFiles(root string, differentFolders bool, num int) []string {
 	files := make([]string, num)
 
-	for i := 0; i < num; i++ {
+	for i := range num {
 		nroot := root
 		if differentFolders {
 			nroot = fmt.Sprintf("%s-%d", root, i)

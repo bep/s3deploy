@@ -183,7 +183,7 @@ func (s *s3Store) applyMetadataToPutObjectInput(input *s3.PutObjectInput, f loca
 
 func (s *s3Store) DeleteObjects(ctx context.Context, keys []string, opts ...opOption) error {
 	ids := make([]types.ObjectIdentifier, len(keys))
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		ids[i] = types.ObjectIdentifier{Key: aws.String(keys[i])}
 	}
 
