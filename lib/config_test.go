@@ -26,13 +26,15 @@ func TestConfigFromArgs(t *testing.T) {
 		"-path=mypath",
 		"-quiet=true",
 		"-region=myregion",
-		"-source=mysource",
 		"-endpoint-url=http://localhost:9000",
 		"-distribution-id=mydistro1",
 		"-distribution-id=mydistro2",
 		"-ignore=^ignored-prefix.*",
 		"-try=true",
 	}
+
+	tempDir := t.TempDir()
+	args = append(args, "-source="+tempDir)
 
 	cfg, err := ConfigFromArgs(args)
 	c.Assert(err, qt.IsNil)
@@ -46,7 +48,7 @@ func TestConfigFromArgs(t *testing.T) {
 	c.Assert(cfg.ACL, qt.Equals, "public-read")
 	c.Assert(cfg.BucketPath, qt.Equals, "mypath")
 	c.Assert(cfg.Silent, qt.Equals, true)
-	c.Assert(cfg.SourcePath, qt.Equals, "mysource")
+	c.Assert(cfg.SourcePath, qt.Contains, tempDir)
 	c.Assert(cfg.EndpointURL, qt.Equals, "http://localhost:9000")
 	c.Assert(cfg.Try, qt.Equals, true)
 	c.Assert(cfg.RegionName, qt.Equals, "myregion")
