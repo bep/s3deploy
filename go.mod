@@ -16,7 +16,7 @@ require (
 	github.com/peterbourgon/ff/v3 v3.4.0
 	github.com/rogpeppe/go-internal v1.14.1
 	golang.org/x/sync v0.20.0
-	golang.org/x/text v0.35.0
+	golang.org/x/text v0.36.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
