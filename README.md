@@ -3,7 +3,6 @@
 [![Project status: active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![GoDoc](https://godoc.org/github.com/bep/s3deploy?status.svg)](https://godoc.org/github.com/bep/s3deploy)
 [![Test](https://github.com/bep/s3deploy/actions/workflows/test.yml/badge.svg)](https://github.com/bep/s3deploy/actions/workflows/test.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/bep/s3deploy)](https://goreportcard.com/report/github.com/bep/s3deploy)
 [![codecov](https://codecov.io/gh/bep/s3deploy/branch/master/graph/badge.svg)](https://codecov.io/gh/bep/s3deploy)
 [![Release](https://img.shields.io/github/release/bep/s3deploy.svg?style=flat-square)](https://github.com/bep/s3deploy/releases/latest)
 
@@ -237,6 +236,3 @@ Because static-site generators can recreate **every** file (even if identical) t
 * [go3up](https://github.com/alexaandru/go3up) by Alexandru Ungur
 * [s3up](https://github.com/nathany/s3up) by Nathan Youngman (the starting-point of this project)
  
-## Stargazers over time
-
- [![Stargazers over time](https://starchart.cc/bep/s3deploy.svg)](https://starchart.cc/bep/s3deploy)
