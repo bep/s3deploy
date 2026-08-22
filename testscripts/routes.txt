@@ -6,7 +6,7 @@ s3deploy -bucket $S3DEPLOY_TEST_BUCKET -region $S3DEPLOY_TEST_REGION -path $S3DE
 stdout 'Deleted 0 of 0, uploaded 2, skipped 0.*100% changed'
 
 head /$S3DEPLOY_TEST_ID/
-stdout 'Head: /S3DEPLOY_TEST_ID/;Status: 200;Headers: Content-Disposition: inline;Content-Encoding: gzip;Content-Language: nn;Content-Length: 10\d;Content-Type: text/html; charset=utf-8;.*;Expires: Mon, 01 Dec 2098 16:00:00 GMT;'
+stdout 'Head: /S3DEPLOY_TEST_ID/;Status: 200;Headers: Content-Disposition: inline;Content-Encoding: gzip;Content-Language: nn;Content-Length: 13\d;Content-Type: text/html; charset=utf-8;.*;Expires: Mon, 01 Dec 2098 16:00:00 GMT;'
 
 head /$S3DEPLOY_TEST_ID/styles.css
 stdout 'Head: /S3DEPLOY_TEST_ID/styles.css;Status: 200;Headers: Cache-Control: max-age=630720000, no-transform, public;Content-Encoding: gzip;Content-Length: 5\d;Content-Type: text/css; charset=utf-8;'
